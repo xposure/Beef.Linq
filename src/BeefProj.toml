@@ -1,0 +1,6 @@
+FileVersion = 1
+
+[Project]
+Name = "Beef.Linq"
+TargetType = "BeefLib"
+StartupObject = "Beef.Linq.Program"
