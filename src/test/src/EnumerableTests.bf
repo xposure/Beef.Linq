@@ -5,22 +5,78 @@ namespace Beef.Linq
 	public class EnumerableTests
 	{
 		public struct TestData : this(int x, int y, float z, float w){}
+
 		[Test]
-		public static void SelectTest()
+		public static void Select()
 		{
-			//var data = scope List<TestData>();
-			var data = scope List<TestData>();
-			data.Add(.(1, 2, 3, 4));
-			data.Add(.(4, 3, 2, 1));
+			var data = scope List<(int x, int y, float z, float w)>();
+			data.Add((1, 2, 3, 4));
+			data.Add((4, 3, 2, 1));
 
-			var result1 = data.Select(scope (it) => (x: it.x, y: it.y)).ToList(.. scope List<(int x, int y)>());
-			var result2 = result1.Select(scope (it) => it.x).ToList(.. scope List<int>());
+			var linq = data
+						.Select(scope (it) => (x: it.x, y: it.y), scope (it) => it.GetEnumerator())
+						.Select(scope (it2) => it2.x, scope (it2) => it2.GetEnumerator());
 
-			for(var it in result2)
-			{
-				Console.WriteLine(scope $"value: {it} ");
-			}
+			var count = 0;
+			for(var it in linq)
+				count++;
 
+			Test.Assert(count == 2);
+		}
+
+		[Test]
+		public static void Sum(){
+			var data = scope List<int>();
+			data.Add(1);
+			data.Add(2);
+			data.Add(3);
+			data.Add(4);
+
+			Test.Assert(data.Sum() == 10);
+		}
+
+		[Test]
+		public static void SumWithSelect()
+		{
+			var data = scope List<(float z, float w)>();
+			data.Add(( 3.1f, 4.4f));
+			data.Add(( 5.4f, 9.4f));
+
+			Test.Assert(data.Sum((it) => it.z) == 3.1f + 5.4f);
+		}
+
+		[Test]
+		public static void Avg(){
+			var data = scope List<int>();
+			data.Add(1);
+			data.Add(1);
+			data.Add(2);
+			data.Add(2);
+			data.Add(4);
+
+			Test.Assert(data.Avg() == 2);
+		}
+
+		[Test]
+		public static void AvgWithSelect()
+		{
+			var data = scope List<(float z, float w)>();
+			data.Add(( 3.1f, 4.4f));
+			data.Add(( 5.4f, 9.7f));
+			data.Add(( 2.7f, 2.6f));
+			data.Add(( 4.8f, 3.1f));
+
+			let r = data.Avg((it) => it.z);
+			Test.Assert(r == (3.1f + 5.4f + 2.7f + 4.8f) / 4f);
+		}
+
+		[Test]
+		public static void Count2(){
+			var data = scope List<(float z, float w)>();
+			data.Add(( 3.1f, 4.4f));
+			data.Add(( 5.4f, 9.4f));
+
+			Test.Assert(data.Count2() == 2);
 		}
 
 		public static void Bar()
