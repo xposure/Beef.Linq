@@ -1,14 +1,14 @@
 using System.Collections;
 using System;
 
-namespace Beef.Linq
+namespace System.Linq
 {
 	public static
 	{
 		public static class Enumerable
 		{
 			public struct RangeEnumerator<TElem> : IEnumerator<TElem>, IEnumerable<TElem>
-				where TElem: operator TElem + int
+				where TElem : operator TElem + int
 			{
 				TElem mCurrent;
 				TElem mEnd;
@@ -21,7 +21,7 @@ namespace Beef.Linq
 
 				public Result<TElem> GetNext() mut
 				{
-					if(mCurrent == mEnd)
+					if (mCurrent == mEnd)
 						return .Err;
 
 					defer { mCurrent = mCurrent + 1; }
@@ -36,131 +36,21 @@ namespace Beef.Linq
 
 			public static RangeEnumerator<TElem>
 				Range<TElem>(TElem count)
-				where TElem: operator TElem + int
+				where TElem : operator TElem + int
 			{
 				return .(default, count);
 			}
 
 			public static RangeEnumerator<TElem>
 				Range<TElem>(TElem start, TElem end)
-				where TElem: operator TElem + int
-				where TElem: operator TElem + TElem
+				where TElem : operator TElem + int
+				where TElem : operator TElem + TElem
 			{
 				return .(start, end);
 			}
 
 		}
 
-		struct SelectEnumerator<TElem, TEnum, TSelect, TResult> : IEnumerator<TResult>, IEnumerable<TResult>
-			where TSelect : delegate TResult(TElem)
-			where TEnum : concrete, IEnumerator<TElem>
-		{
-			TSelect mDlg;
-			TEnum mEnum;
-
-			public this(TEnum e, TSelect dlg)
-			{
-				mDlg = dlg;
-				mEnum = e;
-			}
-
-			public Result<TResult> GetNext() mut
-			{
-				if (mEnum.GetNext() case .Ok(let val))
-					return mDlg(val);
-
-				return .Err;
-			}
-
-			public SelectEnumerator<TElem, TEnum, TSelect, TResult> GetEnumerator()
-			{
-				return this;
-			}
-		}
-
-		struct WhereEnumerator<TElem, TEnum, TWhere> : IEnumerator<TElem>, IEnumerable<TElem>
-			where TWhere : delegate bool(TElem)
-			where TEnum : concrete, IEnumerator<TElem>
-		{
-			TWhere mWhere;
-			TEnum mEnum;
-
-			public this(TEnum e, TWhere dlg)
-			{
-				mWhere = dlg;
-				mEnum = e;
-			}
-
-			public Result<TElem> GetNext() mut
-			{
-				while (mEnum.GetNext() case .Ok(let val))
-					if (mWhere(val))
-						return .Ok(val);
-
-				return .Err;
-			}
-
-			public WhereEnumerator<TElem, TEnum, TWhere> GetEnumerator()
-			{
-				return this;
-			}
-		}
-
-		struct TakeEnumerator<TElem, TEnum> : IEnumerator<TElem>, IEnumerable<TElem>
-			where TEnum : concrete, IEnumerator<TElem>
-		{
-			TEnum mEnum;
-			int mCount;
-
-			public this(TEnum enumerator, int count)
-			{
-				mEnum = enumerator;
-				mCount = count;
-			}
-
-			public Result<TElem> GetNext() mut
-			{
-				while (mCount-- > 0 && mEnum.GetNext() case .Ok(let val))
-					return val;
-
-				return .Err;
-			}
-
-			public TakeEnumerator<TElem, TEnum> GetEnumerator()
-			{
-				return this;
-			}
-		}
-
-		struct SkipEnumerator<TElem, TEnum> : IEnumerator<TElem>, IEnumerable<TElem>
-			where TEnum : concrete, IEnumerator<TElem>
-		{
-			TEnum mEnum;
-			int mCount;
-
-			public this(TEnum enumerator, int count)
-			{
-				mEnum = enumerator;
-				mCount = count;
-			}
-
-			public Result<TElem> GetNext() mut
-			{
-				while (mCount-- > 0 && mEnum.GetNext() case .Ok(?)) { }
-
-				while (mEnum.GetNext() case .Ok(let val))
-					return val;
-
-				return .Err;
-			}
-
-			public SkipEnumerator<TElem, TEnum> GetEnumerator()
-			{
-				return this;
-			}
-		}
-
-	
 		public static bool SequenceEquals<TLeft, TRight, TElem>(this TLeft left, TRight right)
 			where TLeft : concrete, IEnumerable<TElem>
 			where TRight : concrete, IEnumerable<TElem>
@@ -203,12 +93,68 @@ namespace Beef.Linq
 			}
 		}
 
+		struct SelectEnumerator<TElem, TEnum, TSelect, TResult> : IEnumerator<TResult>, IEnumerable<TResult>
+			where TSelect : delegate TResult(TElem)
+			where TEnum : concrete, IEnumerator<TElem>
+		{
+			TSelect mDlg;
+			TEnum mEnum;
+
+			public this(TEnum e, TSelect dlg)
+			{
+				mDlg = dlg;
+				mEnum = e;
+			}
+
+			public Result<TResult> GetNext() mut
+			{
+				if (mEnum.GetNext() case .Ok(let val))
+					return mDlg(val);
+
+				return .Err;
+			}
+
+			public SelectEnumerator<TElem, TEnum, TSelect, TResult> GetEnumerator()
+			{
+				return this;
+			}
+		}
+
 		public static SelectEnumerator<TElem, decltype(default(TCollection).GetEnumerator()), TSelect, TResult>
 			Select<TCollection, TElem, TSelect, TResult>(this TCollection items, TSelect select)
 			where TCollection : concrete, IEnumerable<TElem>
 			where TSelect : delegate TResult(TElem)
 		{
 			return .(items.GetEnumerator(), select);
+		}
+
+
+		struct WhereEnumerator<TElem, TEnum, TWhere> : IEnumerator<TElem>, IEnumerable<TElem>
+			where TWhere : delegate bool(TElem)
+			where TEnum : concrete, IEnumerator<TElem>
+		{
+			TWhere mWhere;
+			TEnum mEnum;
+
+			public this(TEnum e, TWhere dlg)
+			{
+				mWhere = dlg;
+				mEnum = e;
+			}
+
+			public Result<TElem> GetNext() mut
+			{
+				while (mEnum.GetNext() case .Ok(let val))
+					if (mWhere(val))
+						return .Ok(val);
+
+				return .Err;
+			}
+
+			public WhereEnumerator<TElem, TEnum, TWhere> GetEnumerator()
+			{
+				return this;
+			}
 		}
 
 		public static WhereEnumerator<TElem, decltype(default(TCollection).GetEnumerator()), TWhere>
@@ -219,6 +165,32 @@ namespace Beef.Linq
 			return .(items.GetEnumerator(), _where);
 		}
 
+		struct TakeEnumerator<TElem, TEnum> : IEnumerator<TElem>, IEnumerable<TElem>
+			where TEnum : concrete, IEnumerator<TElem>
+		{
+			TEnum mEnum;
+			int mCount;
+
+			public this(TEnum enumerator, int count)
+			{
+				mEnum = enumerator;
+				mCount = count;
+			}
+
+			public Result<TElem> GetNext() mut
+			{
+				while (mCount-- > 0 && mEnum.GetNext() case .Ok(let val))
+					return val;
+
+				return .Err;
+			}
+
+			public TakeEnumerator<TElem, TEnum> GetEnumerator()
+			{
+				return this;
+			}
+		}
+
 		public static TakeEnumerator<TElem, decltype(default(TCollection).GetEnumerator())>
 			Take<TCollection, TElem>(this TCollection items, int count)
 			where TCollection : concrete, IEnumerable<TElem>
@@ -226,11 +198,123 @@ namespace Beef.Linq
 			return .(items.GetEnumerator(), count);
 		}
 
+		struct SkipEnumerator<TElem, TEnum> : IEnumerator<TElem>, IEnumerable<TElem>
+			where TEnum : concrete, IEnumerator<TElem>
+		{
+			TEnum mEnum;
+			int mCount;
+
+			public this(TEnum enumerator, int count)
+			{
+				mEnum = enumerator;
+				mCount = count;
+			}
+
+			public Result<TElem> GetNext() mut
+			{
+				while (mCount-- > 0 && mEnum.GetNext() case .Ok(?)) { }
+
+				while (mEnum.GetNext() case .Ok(let val))
+					return val;
+
+				return .Err;
+			}
+
+			public Self GetEnumerator()
+			{
+				return this;
+			}
+		}
+
 		public static SkipEnumerator<TElem, decltype(default(TCollection).GetEnumerator())>
 			Skip<TCollection, TElem>(this TCollection items, int count)
 			where TCollection : concrete, IEnumerable<TElem>
 		{
 			return .(items.GetEnumerator(), count);
+		}
+
+		struct MapEnumerator<TElem, TEnum, TResult> : IEnumerator<TResult>, IEnumerable<TResult>
+			where bool : operator TElem < TElem
+			where TElem : operator TElem - TElem
+			where TResult : operator TResult + TResult
+			where TResult : operator TResult - TResult
+			where float : operator float / TElem
+			where float : operator TElem * float
+			where float : operator float / TResult
+			where TResult : operator explicit float
+			where TEnum : concrete, IEnumerator<TElem>
+		{
+			TEnum mEnum;
+			int mState = 0;
+			float mScale = 0f, mMapScale;
+			TElem mMin = default;
+			TResult mMapMin;
+
+			public this(TEnum enumerator, TResult mapMin, TResult mapMax)
+			{
+				mEnum = enumerator;
+				mMapMin = mapMin;
+				mMapScale = 1f / (mapMax - mapMin);
+			}
+
+			public Result<TResult> GetNext() mut
+			{
+				switch (mState) {
+				case 0:
+					var copyEnum = mEnum;
+					switch (copyEnum.GetNext()) {
+					case .Ok(let first):
+						var min = first;
+						var max = first;
+
+						while (copyEnum.GetNext() case .Ok(let next))
+						{
+							if (next < min) min = next;
+							if (max < next) max = next;
+						}
+
+						mMin = min;
+						mScale = 1f / (max - min);
+						if(mScale == default)
+						{
+							mState = 2;
+							return .Ok(default);
+						}
+
+						mState = 1;
+					case .Err: return .Err;
+					}
+					fallthrough;
+				case 1:
+					if (mEnum.GetNext() case .Ok(let val))
+						return (TResult)(((val - mMin) * mScale) / mMapScale) + mMapMin;
+				case 2:
+					if (mEnum.GetNext() case .Ok(let val))
+						return .Ok(default);
+				}
+
+				return .Err;
+			}
+
+			public Self GetEnumerator()
+			{
+				return this;
+			}
+		}
+
+		public static MapEnumerator<TElem, decltype(default(TCollection).GetEnumerator()), TResult>
+			Map<TCollection, TElem, TResult>(this TCollection items, TResult min, TResult max)
+			where TCollection : concrete, IEnumerable<TElem>
+			where bool : operator TElem < TElem
+			where TElem : operator TElem - TElem
+			where TResult : operator TResult + TResult
+			where TResult : operator TResult - TResult
+			where float : operator float / TElem
+			where float : operator TElem * float
+			where float : operator float / TResult
+			where TResult : operator explicit float
+		{
+			return .(items.GetEnumerator(), min, max);
 		}
 
 

@@ -5,4 +5,4 @@ Dependencies = {corlib = "*", "Beef.Linq" = "*"}
 Name = "Beef.Linq.Tests"
 TargetType = "BeefTest"
 StartupObject = "Befe.Linq.Tests.Program"
-DefaultNamespace = "Befe.Linq"
+DefaultNamespace = "System.Linq"

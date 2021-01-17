@@ -1,6 +1,6 @@
 using System.Collections;
 using System;
-namespace Beef.Linq
+namespace System.Linq
 {
 	public class EnumerableTests
 	{
@@ -79,6 +79,42 @@ namespace Beef.Linq
 				let expected = scope List<int>();
 				for(var i < 10)expected.Add(i + 10);
 				Test.Assert(actual.SequenceEquals(expected) == true);
+			}
+		}
+
+		[Test]
+		public static void Map()
+		{
+			{
+				let data = scope List<int>();
+				data.Add(0);
+				data.Add(5);
+				data.Add(10);
+
+				let actual = data.Map(0f, 1f).ToList(.. scope .());
+
+				let expected = scope List<float>();
+				expected.Add(0f);
+				expected.Add(0.5f);
+				expected.Add(1f);
+
+				Test.Assert(actual.SequenceEquals(expected));
+			}
+
+			{
+				let data = scope List<int>();
+				data.Add(0);
+				data.Add(5);
+				data.Add(10);
+				
+				let actual = data.Map(0, 100).ToList(.. scope .());
+
+				let expected = scope List<int>();
+				expected.Add(0);
+				expected.Add(50);
+				expected.Add(100);
+
+				Test.Assert(actual.SequenceEquals(expected));
 			}
 		}
 
