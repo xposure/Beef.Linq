@@ -8,19 +8,19 @@ namespace System.Linq
 	{
 		public static class Enumerable
 		{
-			public struct RangeEnumerator<TElem> : IEnumerator<TElem>, IEnumerable<TElem>
-				where TElem : operator TElem + int
+			public struct RangeEnumerator<TSource> : IEnumerator<TSource>, IEnumerable<TSource>
+				where TSource : operator TSource + int
 			{
-				TElem mCurrent;
-				TElem mEnd;
+				TSource mCurrent;
+				TSource mEnd;
 
-				public this(TElem start, TElem end)
+				public this(TSource start, TSource end)
 				{
 					mCurrent = start;
 					mEnd = end;
 				}
 
-				public Result<TElem> GetNext() mut
+				public Result<TSource> GetNext() mut
 				{
 					if (mCurrent == mEnd)
 						return .Err;
@@ -35,17 +35,17 @@ namespace System.Linq
 				}
 			}
 
-			public static RangeEnumerator<TElem>
-				Range<TElem>(TElem count)
-				where TElem : operator TElem + int
+			public static RangeEnumerator<TSource>
+				Range<TSource>(TSource count)
+				where TSource : operator TSource + int
 			{
 				return .(default, count);
 			}
 
-			public static RangeEnumerator<TElem>
-				Range<TElem>(TElem start, TElem end)
-				where TElem : operator TElem + int
-				where TElem : operator TElem + TElem
+			public static RangeEnumerator<TSource>
+				Range<TSource>(TSource start, TSource end)
+				where TSource : operator TSource + int
+				where TSource : operator TSource + TSource
 			{
 				return .(start, end);
 			}
@@ -82,9 +82,9 @@ namespace System.Linq
 			return false;
 		}
 
-		public static bool Any<TCollection, TElem, TPredicate>(this TCollection items, TPredicate predicate)
-			where TCollection : concrete, IEnumerable<TElem>
-			where TPredicate : delegate bool(TElem)
+		public static bool Any<TCollection, TSource, TPredicate>(this TCollection items, TPredicate predicate)
+			where TCollection : concrete, IEnumerable<TSource>
+			where TPredicate : delegate bool(TSource)
 		{
 			for (var it in items)
 				if (predicate(it))
@@ -402,14 +402,14 @@ namespace System.Linq
 
 		}
 
-		extension Iterator<TEnum, TElem> : IDisposable where TEnum : IDisposable
+		extension Iterator<TEnum, TSource> : IDisposable where TEnum : IDisposable
 		{
 			public void Dispose() mut => mEnum.Dispose();
 		}
 
-		struct SelectEnumerator<TElem, TEnum, TSelect, TResult> : Iterator<TEnum, TElem>, IEnumerator<TResult>, IEnumerable<TResult>
-			where TSelect : delegate TResult(TElem)
-			where TEnum : concrete, IEnumerator<TElem>
+		struct SelectEnumerator<TSource, TEnum, TSelect, TResult> : Iterator<TEnum, TSource>, IEnumerator<TResult>, IEnumerable<TResult>
+			where TSelect : delegate TResult(TSource)
+			where TEnum : concrete, IEnumerator<TSource>
 		{
 			TSelect mDlg;
 
@@ -426,35 +426,33 @@ namespace System.Linq
 				return .Err;
 			}
 
-			public SelectEnumerator<TElem, TEnum, TSelect, TResult> GetEnumerator()
+			public Self GetEnumerator()
 			{
 				return this;
 			}
 		}
 
-		public static SelectEnumerator<TElem, decltype(default(TCollection).GetEnumerator()), TSelect, TResult>
-			Select<TCollection, TElem, TSelect, TResult>(this TCollection items, TSelect select)
-			where TCollection : concrete, IEnumerable<TElem>
-			where TSelect : delegate TResult(TElem)
+		public static SelectEnumerator<TSource, decltype(default(TCollection).GetEnumerator()), TSelect, TResult>
+			Select<TCollection, TSource, TSelect, TResult>(this TCollection items, TSelect select)
+			where TCollection : concrete, IEnumerable<TSource>
+			where TSelect : delegate TResult(TSource)
 		{
 			return .(items.GetEnumerator(), select);
 		}
 
 
-		struct WhereEnumerator<TElem, TEnum, TPredicate> : IEnumerator<TElem>, IEnumerable<TElem>
-			where TPredicate : delegate bool(TElem)
-			where TEnum : concrete, IEnumerator<TElem>
+		struct WhereEnumerator<TSource, TEnum, TPredicate> : Iterator<TEnum, TSource>, IEnumerator<TSource>, IEnumerable<TSource>
+			where TPredicate : delegate bool(TSource)
+			where TEnum : concrete, IEnumerator<TSource>
 		{
 			TPredicate mPredicate;
-			TEnum mEnum;
 
-			public this(TEnum e, TPredicate predicate)
+			public this(TEnum enumerator, TPredicate predicate) : base(enumerator)
 			{
 				mPredicate = predicate;
-				mEnum = e;
 			}
 
-			public Result<TElem> GetNext() mut
+			public Result<TSource> GetNext() mut
 			{
 				while (mEnum.GetNext() case .Ok(let val))
 					if (mPredicate(val))
@@ -463,33 +461,31 @@ namespace System.Linq
 				return .Err;
 			}
 
-			public WhereEnumerator<TElem, TEnum, TPredicate> GetEnumerator()
+			public Self GetEnumerator()
 			{
 				return this;
 			}
 		}
 
-		public static WhereEnumerator<TElem, decltype(default(TCollection).GetEnumerator()), TPredicate>
-			Where<TCollection, TElem, TPredicate>(this TCollection items, TPredicate predicate)
-			where TCollection : concrete, IEnumerable<TElem>
-			where TPredicate : delegate bool(TElem)
+		public static WhereEnumerator<TSource, decltype(default(TCollection).GetEnumerator()), TPredicate>
+			Where<TCollection, TSource, TPredicate>(this TCollection items, TPredicate predicate)
+			where TCollection : concrete, IEnumerable<TSource>
+			where TPredicate : delegate bool(TSource)
 		{
 			return .(items.GetEnumerator(), predicate);
 		}
 
-		struct TakeEnumerator<TElem, TEnum> : IEnumerator<TElem>, IEnumerable<TElem>
-			where TEnum : concrete, IEnumerator<TElem>
+		struct TakeEnumerator<TSource, TEnum> : Iterator<TEnum, TSource>, IEnumerator<TSource>, IEnumerable<TSource>
+			where TEnum : concrete, IEnumerator<TSource>
 		{
-			TEnum mEnum;
 			int mCount;
 
-			public this(TEnum enumerator, int count)
+			public this(TEnum enumerator, int count) : base(enumerator)
 			{
-				mEnum = enumerator;
 				mCount = count;
 			}
 
-			public Result<TElem> GetNext() mut
+			public Result<TSource> GetNext() mut
 			{
 				while (mCount-- > 0 && mEnum.GetNext() case .Ok(let val))
 					return val;
@@ -497,32 +493,30 @@ namespace System.Linq
 				return .Err;
 			}
 
-			public TakeEnumerator<TElem, TEnum> GetEnumerator()
+			public Self GetEnumerator()
 			{
 				return this;
 			}
 		}
 
-		public static TakeEnumerator<TElem, decltype(default(TCollection).GetEnumerator())>
-			Take<TCollection, TElem>(this TCollection items, int count)
-			where TCollection : concrete, IEnumerable<TElem>
+		public static TakeEnumerator<TSource, decltype(default(TCollection).GetEnumerator())>
+			Take<TCollection, TSource>(this TCollection items, int count)
+			where TCollection : concrete, IEnumerable<TSource>
 		{
 			return .(items.GetEnumerator(), count);
 		}
 
-		struct SkipEnumerator<TElem, TEnum> : IEnumerator<TElem>, IEnumerable<TElem>
-			where TEnum : concrete, IEnumerator<TElem>
+		struct SkipEnumerator<TSource, TEnum> : Iterator<TEnum, TSource>, IEnumerator<TSource>, IEnumerable<TSource>
+			where TEnum : concrete, IEnumerator<TSource>
 		{
-			TEnum mEnum;
 			int mCount;
 
-			public this(TEnum enumerator, int count)
+			public this(TEnum enumerator, int count) : base (enumerator)
 			{
-				mEnum = enumerator;
 				mCount = count;
 			}
 
-			public Result<TElem> GetNext() mut
+			public Result<TSource> GetNext() mut
 			{
 				while (mCount-- > 0 && mEnum.GetNext() case .Ok(?)) { }
 
@@ -538,33 +532,31 @@ namespace System.Linq
 			}
 		}
 
-		public static SkipEnumerator<TElem, decltype(default(TCollection).GetEnumerator())>
-			Skip<TCollection, TElem>(this TCollection items, int count)
-			where TCollection : concrete, IEnumerable<TElem>
+		public static SkipEnumerator<TSource, decltype(default(TCollection).GetEnumerator())>
+			Skip<TCollection, TSource>(this TCollection items, int count)
+			where TCollection : concrete, IEnumerable<TSource>
 		{
 			return .(items.GetEnumerator(), count);
 		}
 
-		struct MapEnumerator<TElem, TEnum, TResult> : IEnumerator<TResult>, IEnumerable<TResult>
-			where bool : operator TElem < TElem
-			where TElem : operator TElem - TElem
+		struct MapEnumerator<TSource, TEnum, TResult> : Iterator<TEnum, TSource>, IEnumerator<TResult>, IEnumerable<TResult>
+			where bool : operator TSource < TSource
+			where TSource : operator TSource - TSource
 			where TResult : operator TResult + TResult
 			where TResult : operator TResult - TResult
-			where float : operator float / TElem
-			where float : operator TElem * float
+			where float : operator float / TSource
+			where float : operator TSource * float
 			where float : operator float / TResult
 			where TResult : operator explicit float
-			where TEnum : concrete, IEnumerator<TElem>
+			where TEnum : concrete, IEnumerator<TSource>
 		{
-			TEnum mEnum;
 			int mState = 0;
 			float mScale = 0f, mMapScale;
-			TElem mMin = default;
+			TSource mMin = default;
 			TResult mMapMin;
 
-			public this(TEnum enumerator, TResult mapMin, TResult mapMax)
+			public this(TEnum enumerator, TResult mapMin, TResult mapMax) : base(enumerator)
 			{
-				mEnum = enumerator;
 				mMapMin = mapMin;
 				mMapScale = 1f / (mapMax - mapMin);
 			}
@@ -614,15 +606,15 @@ namespace System.Linq
 			}
 		}
 
-		public static MapEnumerator<TElem, decltype(default(TCollection).GetEnumerator()), TResult>
-			Map<TCollection, TElem, TResult>(this TCollection items, TResult min, TResult max)
-			where TCollection : concrete, IEnumerable<TElem>
-			where bool : operator TElem < TElem
-			where TElem : operator TElem - TElem
+		public static MapEnumerator<TSource, decltype(default(TCollection).GetEnumerator()), TResult>
+			Map<TCollection, TSource, TResult>(this TCollection items, TResult min, TResult max)
+			where TCollection : concrete, IEnumerable<TSource>
+			where bool : operator TSource < TSource
+			where TSource : operator TSource - TSource
 			where TResult : operator TResult + TResult
 			where TResult : operator TResult - TResult
-			where float : operator float / TElem
-			where float : operator TElem * float
+			where float : operator float / TSource
+			where float : operator TSource * float
 			where float : operator float / TResult
 			where TResult : operator explicit float
 		{
@@ -631,8 +623,8 @@ namespace System.Linq
 
 
 
-		public static void ToList<T, TElem>(this T items, List<TElem> output)
-			where T : concrete, IEnumerable<TElem>
+		public static void ToList<T, TSource>(this T items, List<TSource> output)
+			where T : concrete, IEnumerable<TSource>
 		{
 			for (var it in items)
 				output.Add(it);
