@@ -326,8 +326,52 @@ namespace System.Linq
 			Test.Assert(actual.Count == 1);
 			Test.Assert(actual[0] == (1, 2, 3, 4));
 		}
-#region ToXYZ methods
+
 		[Test]
+		public static void TakeWhile(){
+			let data = scope List<int>();
+			data.Add(1);
+			data.Add(1);
+			data.Add(2);
+			data.Add(3);
+
+			let actual = data.TakeWhile((it) => it == 1).ToList(.. scope .());
+			let expected = scope List<int>();
+			expected.Add(1);
+			expected.Add(1);
+			Test.Assert(actual.Count == 2);
+		}
+
+		
+		[Test]
+		public static void SkipWhile(){
+			let data = scope List<int>();
+			data.Add(1);
+			data.Add(1);
+			data.Add(2);
+			data.Add(3);
+
+			let actual = data.SkipWhile((it) => it == 1).ToList(.. scope .());
+			let expected = scope List<int>();
+			expected.Add(2);
+			expected.Add(3);
+			Test.Assert(actual.Count == 2);
+		}
+
+		
+		[Test]
+		public static void DefaultIfEmpty(){
+			
+			let data = scope List<int>();
+			let actual = data.DefaultIfEmpty(10).ToList(.. scope .());
+			let expected = scope List<int>();
+			expected.Add(10);
+			Test.Assert(actual.Count == 1);
+			Test.Assert(actual[0] == 10);
+		}
+
+#region ToXYZ methods
+		/*[Test]
 		public static void ToDictionary(){
 			let data = scope List<(int x, float y)>();
 			data.Add((1, 2f));
@@ -338,7 +382,7 @@ namespace System.Linq
 			Test.Assert(actual.Count == 2);
 			Test.Assert(actual.Contains((1, 2f)));
 			Test.Assert(actual.Contains((4, 3f)));
-		}
+		}*/
 
 		[Test]
 		public static void ToHashSet(){

@@ -416,6 +416,7 @@ namespace System.Linq
 
 		#endregion
 
+#region Enumerable Chains
 		struct Iterator
 		{
 			public static Iterator<decltype(default(TCollection).GetEnumerator()), TSource> Wrap<TCollection, TSource>(TCollection items)
@@ -544,6 +545,42 @@ namespace System.Linq
 			return .(items.GetEnumerator(), count);
 		}
 
+		
+		struct TakeWhileEnumerator<TSource, TEnum, TPredicate> : Iterator<TEnum, TSource>, IEnumerator<TSource>, IEnumerable<TSource>
+			where TEnum : concrete, IEnumerator<TSource>
+			where TPredicate: delegate bool (TSource)
+		{
+			TPredicate mPredicate;
+			
+
+			public this(TEnum enumerator, TPredicate predicate) : base(enumerator)
+			{
+				mPredicate = predicate;
+			}
+
+			public Result<TSource> GetNext() mut
+			{
+				if(mEnum.GetNext() case .Ok(let val))
+					if(mPredicate(val))
+						return .Ok(val);
+
+				return .Err;
+			}
+
+			public Self GetEnumerator()
+			{
+				return this;
+			}
+		}
+
+		public static TakeWhileEnumerator<TSource, decltype(default(TCollection).GetEnumerator()), TPredicate>
+			TakeWhile<TCollection, TSource, TPredicate>(this TCollection items, TPredicate predicate)
+			where TCollection : concrete, IEnumerable<TSource>
+			where TPredicate: delegate bool(TSource)
+		{
+			return .(items.GetEnumerator(), predicate);
+		}
+
 		struct SkipEnumerator<TSource, TEnum> : Iterator<TEnum, TSource>, IEnumerator<TSource>, IEnumerable<TSource>
 			where TEnum : concrete, IEnumerator<TSource>
 		{
@@ -575,6 +612,92 @@ namespace System.Linq
 			where TCollection : concrete, IEnumerable<TSource>
 		{
 			return .(items.GetEnumerator(), count);
+		}
+
+		struct SkipWhileEnumerator<TSource, TEnum, TPredicate> : Iterator<TEnum, TSource>, IEnumerator<TSource>, IEnumerable<TSource>
+			where TEnum : concrete, IEnumerator<TSource>
+			where TPredicate: delegate bool (TSource)
+		{
+			TPredicate mPredicate;
+			int mState = 0;
+			
+			public this(TEnum enumerator, TPredicate predicate) : base(enumerator)
+			{
+				mPredicate = predicate;
+			}
+
+			public Result<TSource> GetNext() mut
+			{
+				switch(mState){
+				case 0:
+					while(mEnum.GetNext() case .Ok(let val)){
+						if(!mPredicate(val))
+						{
+							mState = 1;
+							return .Ok(val);
+						}
+					}
+				case 1:
+					return mEnum.GetNext();
+				}
+
+				return .Err;
+			}
+
+			public Self GetEnumerator()
+			{
+				return this;
+			}
+		}
+
+		public static SkipWhileEnumerator<TSource, decltype(default(TCollection).GetEnumerator()), TPredicate>
+			SkipWhile<TCollection, TSource, TPredicate>(this TCollection items, TPredicate predicate)
+			where TCollection : concrete, IEnumerable<TSource>
+			where TPredicate: delegate bool(TSource)
+		{
+			return .(items.GetEnumerator(), predicate);
+		}
+
+		struct DefaultIfEmptyEnumerator<TSource, TEnum> : Iterator<TEnum, TSource>, IEnumerator<TSource>, IEnumerable<TSource>
+			where TEnum : concrete, IEnumerator<TSource>
+		{
+			TSource mDefaultValue;
+			int mState = 0;
+
+			public this(TEnum enumerator, TSource defaultValue) : base(enumerator)
+			{
+				mDefaultValue = defaultValue;
+			}
+
+			public Result<TSource> GetNext() mut
+			{
+				switch(mState){
+				case 0:
+					if(mEnum.GetNext() case .Ok(let val)){
+						mState = 1;
+						return .Ok(val);
+					}
+
+					mState = 2;
+					return .Ok(mDefaultValue);
+				case 1:
+					return mEnum.GetNext();
+				}
+
+				return .Err;
+			}
+
+			public Self GetEnumerator()
+			{
+				return this;
+			}
+		}
+
+		public static DefaultIfEmptyEnumerator<TSource, decltype(default(TCollection).GetEnumerator())>
+			DefaultIfEmpty<TCollection, TSource>(this TCollection items, TSource defaultValue = default)
+			where TCollection : concrete, IEnumerable<TSource>
+		{
+			return .(items.GetEnumerator(), default);
 		}
 
 		struct MapEnumerator<TSource, TEnum, TResult> : Iterator<TEnum, TSource>, IEnumerator<TResult>, IEnumerable<TResult>
@@ -658,7 +781,7 @@ namespace System.Linq
 		{
 			return .(items.GetEnumerator(), min, max);
 		}
-
+#endregion
 
 #region ToXYZ methods
 		public static void ToDictionary<TCollection, TSource, TKeyDlg, TKey, TValueDlg, TValue>(this TCollection items, TKeyDlg keyDlg, TValueDlg valueDlg,  Dictionary<TKey, TValue> output)
