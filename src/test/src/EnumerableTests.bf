@@ -4,8 +4,6 @@ namespace System.Linq
 {
 	public class EnumerableTests
 	{
-
-
 		[Test]
 		public static void Any()
 		{
