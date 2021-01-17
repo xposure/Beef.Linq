@@ -48,8 +48,68 @@ namespace System.Linq
 			{
 				return .(start, end);
 			}
-
 		}
+
+#region Matching
+		public static bool All<TCollection, TElem, TPredicate>(this TCollection items, TPredicate predicate)
+			where TCollection : concrete, IEnumerable<TElem>
+			where TPredicate : delegate bool(TElem)
+		{
+			var enumerator = items.GetEnumerator();
+			switch (enumerator.GetNext())
+			{
+			case .Ok(let val): if (!predicate(val)) return false;
+			case .Err: return false;
+			}
+
+			while (enumerator.GetNext() case .Ok(let val))
+				if (!predicate(val))
+					return false;
+
+			return true;
+		}
+
+		public static bool Any<TCollection, TElem>(this TCollection items)
+			where TCollection : concrete, IEnumerable<TElem>
+		{
+			var enumerator = items.GetEnumerator();
+			if(enumerator.GetNext() case .Ok)
+				return true;
+
+			return false;
+		}
+
+		public static bool Any<TCollection, TElem, TPredicate>(this TCollection items, TPredicate predicate)
+			where TCollection : concrete, IEnumerable<TElem>
+			where TPredicate : delegate bool(TElem)
+		{
+			var enumerator = items.GetEnumerator();
+			switch (enumerator.GetNext())
+			{
+			case .Ok(let val): if (predicate(val)) return true;
+			case .Err: return false;
+			}
+
+			while (enumerator.GetNext() case .Ok(let val))
+				if (predicate(val))
+					return true;
+
+			return false;
+		}
+
+		/*
+		public static bool Contains<TCollection, TSource>(this TCollection items, TSource source)
+			where TCollection : concrete, IEnumerable<TSource>
+			where bool: operator TSource == TSource
+		{
+			var enumerator = items.GetEnumerator();
+			while (enumerator.GetNext() case .Ok(let val))
+				if(val == source)
+					return true;
+
+			return false;
+		}
+		*/
 
 		public static bool SequenceEquals<TLeft, TRight, TElem>(this TLeft left, TRight right)
 			where TLeft : concrete, IEnumerable<TElem>
@@ -92,7 +152,208 @@ namespace System.Linq
 				}
 			}
 		}
+#endregion
 
+#region Aggregates
+		
+		public static TElem Sum<T, TElem>(this T items)
+			where T : concrete, IEnumerable<TElem>
+			where TElem : operator TElem + TElem
+		{
+			var t = default(TElem);
+			for (var it in items)
+				t += it;
+			return t;
+		}
+
+		public static TSource Average<T, TSource>(this T items)
+			where T : concrete, IEnumerable<TSource>
+			where TSource : operator TSource / int
+			where TSource : operator TSource + TSource
+		{
+			var count = 0;
+			TSource sum = ?;
+			var enumerator = items.GetEnumerator();
+			switch(enumerator.GetNext())
+			{
+			case .Ok(let val):
+				sum = val;
+				count++;
+			case .Err: return default;
+			}
+
+			while(enumerator.GetNext() case .Ok(let val))
+			{
+				sum += val;
+				count++;
+			}	
+
+			return sum / count;
+		}
+
+		public static TResult Average<T, TSource, TResult, TSelector>(this T items, TSelector selector)
+			where T : concrete, IEnumerable<TSource>
+			where TResult : operator TResult + TResult
+			where TResult : operator TResult / int
+			where TSelector : delegate TResult(TSource)
+		{
+			var count = 0;
+			TResult sum = ?;
+			var enumerator = items.GetEnumerator();
+			switch(enumerator.GetNext())
+			{
+			case .Ok(let val):
+				sum = selector(val);
+				count++;
+			case .Err: return default;
+			}
+
+			while(enumerator.GetNext() case .Ok(let val))
+			{
+				sum += selector(val);
+				count++;
+			}	
+
+			return sum / count;
+		}
+
+		public static TSource Max<T, TSource>(this T items)
+			where T : concrete, IEnumerable<TSource>
+			where bool : operator TSource < TSource
+		{
+			TSource max = ?;
+			var enumerator = items.GetEnumerator();
+			switch(enumerator.GetNext())
+			{
+			case .Ok(let val): max = val;
+			case .Err: return default;
+			}
+
+			while(enumerator.GetNext() case .Ok(let val))
+			{
+				let next = val;
+				if(max < next)
+					max = next;
+			}	
+			return max;
+		}
+
+		public static TResult Max<T, TSource, TResult, TSelect>(this T items, TSelect selector)
+			where T : concrete, IEnumerable<TSource>
+			where bool : operator TResult < TResult
+			where TSelect : delegate TResult(TSource)
+		{
+			TResult max = ?;
+			var enumerator = items.GetEnumerator();
+			switch(enumerator.GetNext())
+			{
+			case .Ok(let val): max = selector(val);
+			case .Err: return default;
+			}
+
+			while(enumerator.GetNext() case .Ok(let val))
+			{
+				let next = selector(val);
+				if(max < next)
+					max = next;
+			}	
+			return max;
+		}
+
+		public static TSource Min<T, TSource>(this T items)
+			where T : concrete, IEnumerable<TSource>
+			where bool : operator TSource < TSource
+		{
+			TSource min = ?;
+			var enumerator = items.GetEnumerator();
+			switch(enumerator.GetNext())
+			{
+			case .Ok(let val): min = val;
+			case .Err: return default;
+			}
+
+			while(enumerator.GetNext() case .Ok(let val))
+			{
+				let next = val;
+				if(next < min)
+					min = next;
+			}	
+			return min;
+		}
+
+		public static TResult Min<T, TSource, TResult, TSelect>(this T items, TSelect selector)
+			where T : concrete, IEnumerable<TSource>
+			where bool : operator TResult < TResult
+			where TSelect : delegate TResult(TSource)
+		{
+			TResult min = ?;
+			var enumerator = items.GetEnumerator();
+			switch(enumerator.GetNext())
+			{
+			case .Ok(let val): min = selector(val);
+			case .Err: return default;
+			}
+
+			while(enumerator.GetNext() case .Ok(let val))
+			{
+				let next = selector(val);
+				if(next < min)
+					min = next;
+			}	
+			return min;
+		}
+
+		public static TSource Sum<T, TSource,  TSelect>(this T items)
+			where T : concrete, IEnumerable<TSource>
+			where TSource : operator TSource + TSource
+		{
+			TSource sum = ?;
+			var enumerator = items.GetEnumerator();
+			switch(enumerator.GetNext())
+			{
+			case .Ok(let val):sum = val;
+			case .Err: return default;
+			}
+
+			while(enumerator.GetNext() case .Ok(let val))
+				sum += val;
+
+			return sum;
+		}
+
+		public static TResult Sum<T, TSource, TResult, TSelect>(this T items, TSelect selector)
+			where T : concrete, IEnumerable<TSource>
+			where TResult : operator TResult + TResult
+			where TResult : operator TResult / TResult
+			where TSelect : delegate TResult(TSource)
+		{
+			TResult sum = ?;
+			var enumerator = items.GetEnumerator();
+			switch(enumerator.GetNext())
+			{
+			case .Ok(let val):sum = selector(val);
+			case .Err: return default;
+			}
+
+			while(enumerator.GetNext() case .Ok(let val))
+				sum += selector(val);
+
+			return sum;
+		}
+
+		public static int Count<T, TSource>(this T items)
+			where T : concrete, IEnumerable<TSource>
+		{
+			var count = 0;
+			var enumerator = items.GetEnumerator();
+			//discarding, hopefully it will get optimized to no copying?
+			while(enumerator.GetNext() case .Ok)
+				count++;
+
+			return  count;
+		}
+
+#endregion
 		struct SelectEnumerator<TElem, TEnum, TSelect, TResult> : IEnumerator<TResult>, IEnumerable<TResult>
 			where TSelect : delegate TResult(TElem)
 			where TEnum : concrete, IEnumerator<TElem>
@@ -129,40 +390,40 @@ namespace System.Linq
 		}
 
 
-		struct WhereEnumerator<TElem, TEnum, TWhere> : IEnumerator<TElem>, IEnumerable<TElem>
-			where TWhere : delegate bool(TElem)
+		struct WhereEnumerator<TElem, TEnum, TPredicate> : IEnumerator<TElem>, IEnumerable<TElem>
+			where TPredicate : delegate bool(TElem)
 			where TEnum : concrete, IEnumerator<TElem>
 		{
-			TWhere mWhere;
+			TPredicate mPredicate;
 			TEnum mEnum;
 
-			public this(TEnum e, TWhere dlg)
+			public this(TEnum e, TPredicate predicate)
 			{
-				mWhere = dlg;
+				mPredicate = predicate;
 				mEnum = e;
 			}
 
 			public Result<TElem> GetNext() mut
 			{
 				while (mEnum.GetNext() case .Ok(let val))
-					if (mWhere(val))
+					if (mPredicate(val))
 						return .Ok(val);
 
 				return .Err;
 			}
 
-			public WhereEnumerator<TElem, TEnum, TWhere> GetEnumerator()
+			public WhereEnumerator<TElem, TEnum, TPredicate> GetEnumerator()
 			{
 				return this;
 			}
 		}
 
-		public static WhereEnumerator<TElem, decltype(default(TCollection).GetEnumerator()), TWhere>
-			Where<TCollection, TElem, TWhere>(this TCollection items, TWhere _where)
+		public static WhereEnumerator<TElem, decltype(default(TCollection).GetEnumerator()), TPredicate>
+			Where<TCollection, TElem, TPredicate>(this TCollection items, TPredicate predicate)
 			where TCollection : concrete, IEnumerable<TElem>
-			where TWhere : delegate bool(TElem)
+			where TPredicate : delegate bool(TElem)
 		{
-			return .(items.GetEnumerator(), _where);
+			return .(items.GetEnumerator(), predicate);
 		}
 
 		struct TakeEnumerator<TElem, TEnum> : IEnumerator<TElem>, IEnumerable<TElem>
@@ -318,82 +579,6 @@ namespace System.Linq
 		}
 
 
-		public static TElem Sum<T, TElem>(this T items)
-			where T : concrete, IEnumerable<TElem>
-			where TElem : operator TElem + TElem
-		{
-			var t = default(TElem);
-			for (var it in items)
-				t += it;
-			return t;
-		}
-
-		public static TResult Sum<T, TElem, TResult, TSelector>(this T items, TSelector selector)
-			where T : concrete, IEnumerable<TElem>
-			where TResult : operator TResult + TResult
-			where TResult : operator TResult / TResult
-			where TSelector : delegate TResult(TElem)
-		{
-			var t = default(TResult);
-			for (var it in items)
-				t += selector(it);
-			return t;
-		}
-
-		public static TElem Avg<T, TElem>(this T items)
-			where T : concrete, IEnumerable<TElem>
-			where TElem : operator TElem / int
-			where TElem : operator TElem + TElem
-		{
-			var count = 0;
-			var t = default(TElem);
-			for (var it in items)
-			{
-				t += it;
-				count++;
-			}
-
-			if (count == 0)
-				return default(TElem);
-
-			return t / count;
-		}
-
-		public static TResult Avg<T, TElem, TResult, TSelector>(this T items, TSelector selector)
-			where T : concrete, IEnumerable<TElem>
-			where TResult : operator TResult + TResult
-			where TResult : operator TResult / int
-			where TSelector : delegate TResult(TElem)
-		{
-			var count = 0;
-			var t = default(TResult);
-			for (var it in items)
-			{
-				t += selector(it);
-				count++;
-			}
-
-			if (count == 0)
-				return default(TResult);
-
-			return t / count;
-		}
-
-		public static int Count<T, TElem>(this T items)
-			where T : concrete, IEnumerable<TElem>
-		{
-			//fast
-			/*if (let list = items as List<TElem>)
-				return list.Count;
-			else if (let array = items as TElem[])
-				return array.Count;*/
-
-			//slow, .net has a stored `fastOnly` flag in places that will return -1 if it would execute the enumerator
-			var count = 0;
-			for (var it in items)
-				count++;
-			return count;
-		}
 
 		public static void ToList<T, TElem>(this T items, List<TElem> output)
 			where T : concrete, IEnumerable<TElem>
