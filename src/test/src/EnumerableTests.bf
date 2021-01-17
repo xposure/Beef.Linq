@@ -75,7 +75,6 @@ namespace System.Linq
 		[Test]
 		public static void Average()
 		{
-			{
 				let data = scope List<int>();
 				data.Add(1);
 				data.Add(1);
@@ -86,23 +85,11 @@ namespace System.Linq
 				let actual = data.Average();
 
 				Test.Assert(actual == 2);
-			}
-			{
-				let data = scope List<(float z, float w)>();
-				data.Add(( 3.1f, 4.4f));
-				data.Add(( 5.4f, 9.7f));
-				data.Add(( 2.7f, 2.6f));
-				data.Add(( 4.8f, 3.1f));
-
-				let actual = data.Average((it) => it.z);
-				Test.Assert(actual == (3.1f + 5.4f + 2.7f + 4.8f) / 4f);
-			}
 		}
 
 		[Test]
 		public static void Max()
 		{
-			{
 				let data = scope List<int>();
 	
 				var actual = data.Max();
@@ -115,27 +102,11 @@ namespace System.Linq
 				data.Add(1);
 				actual = data.Max();
 				Test.Assert(actual == 3);
-			}
-			{
-				let data = scope List<(int x, int y)>();
-
-				var actual = data.Max((it) => it.y);
-				Test.Assert(actual == default);
-
-				data.Add((1, 3));
-				actual = data.Max((it) => it.y);
-				Test.Assert(actual == 3);
-
-				data.Add((3, 1));
-				actual = data.Max((it) => it.y);
-				Test.Assert(actual == 3);
-			}
 		}
 
 		[Test]
 		public static void Min()
 		{
-			{
 				let data = scope List<int>();
 
 				var actual = data.Min();
@@ -148,46 +119,98 @@ namespace System.Linq
 				data.Add(1);
 				actual = data.Min();
 				Test.Assert(actual == 1);
-			}
-			{
-				let data = scope List<(int x, int y)>();
 
-				var actual = data.Min((it) => it.y);
-				Test.Assert(actual == default);
-
-				data.Add((1, 3));
-				actual = data.Min((it) => it.y);
-				Test.Assert(actual == 3);
-
-				data.Add((3, 1));
-				actual = data.Min((it) => it.y);
-				Test.Assert(actual == 1);
-			}
 		}
 
 		[Test]
 		public static void Sum()
 		{
-			{
-				let data = scope List<int>();
-				data.Add(1);
-				data.Add(2);
-				data.Add(3);
-				data.Add(4);
-	
-				let actual = data.Sum();
-				Test.Assert(actual == 10);
-			}
-			{
-				let data = scope List<(float z, float w)>();
-				data.Add(( 3.1f, 4.4f));
-				data.Add(( 5.4f, 9.4f));
+			let data = scope List<int>();
+			data.Add(1);
+			data.Add(2);
+			data.Add(3);
+			data.Add(4);
 
-				let actual = data.Sum((it) => it.z);
-				Test.Assert(actual == 3.1f + 5.4f);
-			}
+			let actual = data.Sum();
+			Test.Assert(actual == 10);
+
 		}
+
+		[Test]
+		public static void ElementAt(){
+			let data = scope List<int>();
+			data.Add(1);
+			data.Add(2);
+			data.Add(3);
+
+			let actual = data.ElementAt(1);
+			Test.Assert(actual == 1);
+		}
+
 		
+		[Test(ShouldFail=true)]
+		public static void ElementAtSequenceError()
+		{
+			let data = scope List<int>();
+			data.Add(1);
+			data.Add(2);
+			data.Add(3);
+
+			data.ElementAt(4);
+		}
+
+		[Test]
+		public static void First(){
+			let data = scope List<int>();
+			data.Add(1);
+			data.Add(2);
+			data.Add(3);
+
+			let actual = data.First();
+			Test.Assert(actual == 1);
+		}
+
+		[Test]
+		public static void FirstOrDefault(){
+			let data = scope List<int>();
+
+			let actual = data.FirstOrDefault();
+			Test.Assert(actual == default);
+		}
+
+		
+		[Test(ShouldFail= true)]
+		public static void FirstFatalOnEmpty(){
+			let data = scope List<int>();
+
+			data.First();
+		}
+
+		[Test]
+		public static void Last(){
+			let data = scope List<int>();
+			data.Add(1);
+			data.Add(2);
+			data.Add(3);
+
+			let actual = data.Last();
+			Test.Assert(actual == 3);
+		}
+
+		[Test]
+		public static void LastOrDefault(){
+			let data = scope List<int>();
+
+			let actual = data.LastOrDefault();
+			Test.Assert(actual == default);
+		}
+
+		[Test(ShouldFail= true)]
+		public static void LastFatalOnEmpty(){
+			let data = scope List<int>();
+
+			data.Last();
+		}
 
 		[Test]
 		public static void Take()

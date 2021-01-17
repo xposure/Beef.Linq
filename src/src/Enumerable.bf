@@ -112,11 +112,10 @@ namespace System.Linq
 			where TRight : concrete, IEnumerable<TSource>
 			where bool : operator TSource == TSource
 		{
-			using(let iterator0 = Iterator<decltype(default(TLeft).GetEnumerator()), TSource>(right.GetEnumerator()))
-			using(let iterator1 = Iterator<decltype(default(TRight).GetEnumerator()), TSource>(right.GetEnumerator()))
-			{
-				var e0 = iterator0.mEnum;
+			using (let iterator0 = Iterator<decltype(default(TLeft).GetEnumerator()), TSource>(right.GetEnumerator()))
+				using (let iterator1 = Iterator<decltype(default(TRight).GetEnumerator()), TSource>(right.GetEnumerator()))
 				{
+					var e0 = iterator0.mEnum;
 					var e1 = iterator1.mEnum;
 					while (true)
 					{
@@ -152,7 +151,6 @@ namespace System.Linq
 						}
 					}
 				}
-			}
 		}
 
 		#endregion
@@ -189,35 +187,6 @@ namespace System.Linq
 			}
 		}
 
-		public static TResult Average<TCollection, TSource, TResult, TSelect>(this TCollection items, TSelect selector)
-			where TCollection : concrete, IEnumerable<TSource>
-			where TResult : operator TResult + TResult
-			where TResult : operator TResult / int
-			where TSelect : delegate TResult(TSource)
-		{
-			var count = 0;
-			TResult sum = ?;
-			using (let iterator = Iterator.Wrap<TCollection, TSource>(items))
-			{
-				var enumerator = iterator.mEnum;
-				switch (enumerator.GetNext())
-				{
-				case .Ok(let val):
-					sum = selector(val);
-					count++;
-				case .Err: return default;
-				}
-
-				while (enumerator.GetNext() case .Ok(let val))
-				{
-					sum += selector(val);
-					count++;
-				}
-			}
-
-			return sum / count;
-		}
-
 		public static TSource Max<TCollection, TSource>(this TCollection items)
 			where TCollection : concrete, IEnumerable<TSource>
 			where bool : operator TSource < TSource
@@ -242,30 +211,6 @@ namespace System.Linq
 			return max;
 		}
 
-		public static TResult Max<TCollection, TSource, TResult, TSelect>(this TCollection items, TSelect selector)
-			where TCollection : concrete, IEnumerable<TSource>
-			where bool : operator TResult < TResult
-			where TSelect : delegate TResult(TSource)
-		{
-			TResult max = ?;
-			using (let iterator = Iterator.Wrap<TCollection, TSource>(items))
-			{
-				var enumerator = iterator.mEnum;
-				switch (enumerator.GetNext())
-				{
-				case .Ok(let val): max = selector(val);
-				case .Err: return default;
-				}
-
-				while (enumerator.GetNext() case .Ok(let val))
-				{
-					let next = selector(val);
-					if (max < next)
-						max = next;
-				}
-			}
-			return max;
-		}
 
 		public static TSource Min<TCollection, TSource>(this TCollection items)
 			where TCollection : concrete, IEnumerable<TSource>
@@ -284,31 +229,6 @@ namespace System.Linq
 				while (enumerator.GetNext() case .Ok(let val))
 				{
 					let next = val;
-					if (next < min)
-						min = next;
-				}
-			}
-			return min;
-		}
-
-		public static TResult Min<TCollection, TSource, TResult, TSelect>(this TCollection items, TSelect selector)
-			where TCollection : concrete, IEnumerable<TSource>
-			where bool : operator TResult < TResult
-			where TSelect : delegate TResult(TSource)
-		{
-			TResult min = ?;
-			using (let iterator = Iterator.Wrap<TCollection, TSource>(items))
-			{
-				var enumerator = iterator.mEnum;
-				switch (enumerator.GetNext())
-				{
-				case .Ok(let val): min = selector(val);
-				case .Err: return default;
-				}
-
-				while (enumerator.GetNext() case .Ok(let val))
-				{
-					let next = selector(val);
 					if (next < min)
 						min = next;
 				}
@@ -336,28 +256,6 @@ namespace System.Linq
 			return sum;
 		}
 
-		public static TResult Sum<TCollection, TSource, TResult, TSelect>(this TCollection items, TSelect selector)
-			where TCollection : concrete, IEnumerable<TSource>
-			where TResult : operator TResult + TResult
-			where TResult : operator TResult / TResult
-			where TSelect : delegate TResult(TSource)
-		{
-			TResult sum = ?;
-			using (let iterator = Iterator.Wrap<TCollection, TSource>(items))
-			{
-				var enumerator = iterator.mEnum;
-				switch (enumerator.GetNext())
-				{
-				case .Ok(let val): sum = selector(val);
-				case .Err: return default;
-				}
-
-				while (enumerator.GetNext() case .Ok(let val))
-					sum += selector(val);
-			}
-			return sum;
-		}
-
 		public static int Count<TCollection, TSource>(this TCollection items)
 			where TCollection : concrete, IEnumerable<TSource>
 		{
@@ -375,6 +273,146 @@ namespace System.Linq
 
 		#region Find in enumerable
 
+		internal static bool InternalElementAt<TCollection, TSource>(TCollection items, int index, out TSource val)
+			where TCollection : concrete, IEnumerable<TSource>
+		{
+			var index;
+			using (let iterator = Iterator.Wrap<TCollection, TSource>(items))
+			{
+				var enumerator = iterator.mEnum;
+				while (--index > 0)
+				{
+					if (enumerator.GetNext() case .Err)
+						break;
+				}
+
+				if (index == 0 && enumerator.GetNext() case .Ok(out val))
+					return true;
+			}
+			val = default;
+			return false;
+		}
+
+		public static TSource ElementAt<TCollection, TSource>(this TCollection items, int index)
+			where TCollection : concrete, IEnumerable<TSource>
+		{
+			if (InternalElementAt<TCollection, TSource>(items, index, let val))
+				return val;
+
+			Runtime.FatalError("Not enough elements in the sequence.");
+		}
+
+		public static TSource ElementAtOrDefault<TCollection, TSource>(this TCollection items, int index)
+			where TCollection : concrete, IEnumerable<TSource>
+		{
+			if (InternalElementAt<TCollection, TSource>(items, index, let val))
+				return val;
+
+			return default;
+		}
+
+
+		public static bool InternalFirst<TCollection, TSource>(TCollection items, out TSource val)
+			where TCollection : concrete, IEnumerable<TSource>
+		{
+			using (let iterator = Iterator.Wrap<TCollection, TSource>(items))
+			{
+				var enumerator = iterator.mEnum;
+				if (enumerator.GetNext() case .Ok(out val))
+					return true;
+			}
+
+			return false;
+		}
+
+		public static TSource First<TCollection, TSource>(this TCollection items)
+			where TCollection : concrete, IEnumerable<TSource>
+		{
+			if (InternalFirst<TCollection, TSource>(items, let val))
+				return val;
+			Runtime.FatalError("Sequence contained no elements.");
+		}
+
+		public static TSource FirstOrDefault<TCollection, TSource>(this TCollection items)
+			where TCollection : concrete, IEnumerable<TSource>
+		{
+			if (InternalFirst<TCollection, TSource>(items, let val))
+				return val;
+
+			return default;
+		}
+
+		internal static bool InternalLast<TCollection, TSource>(TCollection items, out TSource val)
+			where TCollection : concrete, IEnumerable<TSource>
+		{
+			var found = false;
+			using (let iterator = Iterator.Wrap<TCollection, TSource>(items))
+			{
+				var enumerator = iterator.mEnum;
+				if (enumerator.GetNext() case .Ok(out val))
+				 	found = true;
+
+				while (enumerator.GetNext() case .Ok(let temp))
+					val = temp;
+			}
+
+			return found;
+		}
+
+		public static TSource Last<TCollection, TSource>(this TCollection items)
+			where TCollection : concrete, IEnumerable<TSource>
+		{
+			if (InternalLast<TCollection, TSource>(items, let val))
+				return val;
+
+			Runtime.FatalError("Sequence contained no elements.");
+		}
+
+		public static TSource LastOrDefault<TCollection, TSource>(this TCollection items)
+			where TCollection : concrete, IEnumerable<TSource>
+		{
+			if (InternalLast<TCollection, TSource>(items, let val))
+				return val;
+
+			return default;
+		}
+
+		internal static bool InternalSingle<TCollection, TSource>(TCollection items, out TSource val)
+			where TCollection : concrete, IEnumerable<TSource>
+		{
+			using (let iterator = Iterator.Wrap<TCollection, TSource>(items))
+			{
+				var enumerator = iterator.mEnum;
+
+				if (enumerator.GetNext() case .Ok(out val))
+				{
+					if (enumerator.GetNext() case .Err)
+						return true;
+
+					Runtime.FatalError("Sequence matched more than one element.");
+				}
+			}
+
+			return false;
+		}
+
+		public static TSource Single<TCollection, TSource>(this TCollection items)
+			where TCollection : concrete, IEnumerable<TSource>
+		{
+			if (InternalSingle<TCollection, TSource>(items, let val))
+				return val;
+
+			Runtime.FatalError("Sequence contained no elements.");
+		}
+
+		public static TSource SingleOrDefault<TCollection, TSource>(this TCollection items)
+			where TCollection : concrete, IEnumerable<TSource>
+		{
+			if (InternalSingle<TCollection, TSource>(items, let val))
+				return val;
+
+			return default;
+		}
 
 		#endregion
 
@@ -511,7 +549,7 @@ namespace System.Linq
 		{
 			int mCount;
 
-			public this(TEnum enumerator, int count) : base (enumerator)
+			public this(TEnum enumerator, int count) : base(enumerator)
 			{
 				mCount = count;
 			}
