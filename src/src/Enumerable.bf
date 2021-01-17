@@ -350,7 +350,7 @@ namespace System.Linq
 			{
 				var enumerator = iterator.mEnum;
 				if (enumerator.GetNext() case .Ok(out val))
-				 	found = true;
+					found = true;
 
 				while (enumerator.GetNext() case .Ok(let temp))
 					val = temp;
@@ -660,6 +660,33 @@ namespace System.Linq
 		}
 
 
+#region ToXYZ methods
+		public static void ToDictionary<TCollection, TSource, TKeyDlg, TKey, TValueDlg, TValue>(this TCollection items, TKeyDlg keyDlg, TValueDlg valueDlg,  Dictionary<TKey, TValue> output)
+			where TCollection : concrete, IEnumerable<TSource>
+			where TKey: IHashable
+			where TKeyDlg: delegate TKey(TSource)
+			where TValueDlg: delegate TValue(TSource)
+		{
+			for (var it in items)
+				output.Add(keyDlg(it), valueDlg(it));
+		}
+
+		public static void ToDictionary<TCollection, TSource, TKeyDlg, TKey>(this TCollection items, TKeyDlg keyDlg,  Dictionary<TKey, TSource> output)
+			where TCollection : concrete, IEnumerable<TSource>
+			where TKey: IHashable
+			where TKeyDlg: delegate TKey(TSource)
+		{
+			for (var it in items)
+				output.Add(keyDlg(it), it);
+		}
+
+		public static void ToHashSet<TCollection, TSource>(this TCollection items, HashSet<TSource> output)
+			where TCollection : concrete, IEnumerable<TSource>
+			where TSource: IHashable
+		{
+			for (var it in items)
+				output.Add(it);
+		}
 
 		public static void ToList<T, TSource>(this T items, List<TSource> output)
 			where T : concrete, IEnumerable<TSource>
@@ -667,5 +694,6 @@ namespace System.Linq
 			for (var it in items)
 				output.Add(it);
 		}
+#endregion 
 	}
 }

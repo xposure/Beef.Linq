@@ -326,5 +326,34 @@ namespace System.Linq
 			Test.Assert(actual.Count == 1);
 			Test.Assert(actual[0] == (1, 2, 3, 4));
 		}
+#region ToXYZ methods
+		[Test]
+		public static void ToDictionary(){
+			let data = scope List<(int x, float y)>();
+			data.Add((1, 2f));
+			data.Add((4, 3f));
+
+			let actual = data.ToDictionary((it) => it.x, (it) => it.y, .. scope .());
+
+			Test.Assert(actual.Count == 2);
+			Test.Assert(actual.Contains((1, 2f)));
+			Test.Assert(actual.Contains((4, 3f)));
+		}
+
+		[Test]
+		public static void ToHashSet(){
+			let data = scope List<int>();
+			data.Add(1);
+			data.Add(2);
+			data.Add(2);
+
+			let actual = data.ToHashSet(.. scope .());
+
+			Test.Assert(actual.Count == 2);
+			Test.Assert(actual.Contains(1));
+			Test.Assert(actual.Contains(2));
+		}
+#endregion 
+
 	}
 }
