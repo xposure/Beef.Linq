@@ -355,11 +355,58 @@ namespace System.Linq
 			let expected = scope List<int>();
 			expected.Add(2);
 			expected.Add(3);
-			Test.Assert(actual.Count == 2);
+			Test.Assert(actual.Count == expected.Count);
 		}
 
-		
 		[Test]
+		public static void Repeat(){
+			let actual = Enumerable.Repeat(10, 10).ToList(.. scope .());
+			let expected = scope List<int>();
+			for(var i < 10)
+				expected.Add(10);
+
+			Test.Assert(actual.SequenceEquals(expected));
+		}
+
+		[Test]
+		public static void Distinct(){
+			let data = scope List<int>();
+			data.Add(1);
+			data.Add(1);
+			data.Add(2);
+			data.Add(3);
+
+			let actual = data.Distinct().ToList(.. scope .());
+			let expected = scope List<int>();
+			expected.Add(1);
+			expected.Add(2);
+			expected.Add(3);
+
+			Test.Assert(actual.Count == expected.Count);
+			Test.Assert(actual.SequenceEquals(expected));
+		
+		}
+
+		[Test]
+		public static void Reverse(){
+			let data = scope List<int>();
+			data.Add(1);
+			data.Add(1);
+			data.Add(2);
+			data.Add(3);
+
+			let actual = data.Reverse().ToList(.. scope .());
+			let expected = scope List<int>();
+			expected.Add(3);
+			expected.Add(2);
+			expected.Add(1);
+			expected.Add(1);
+
+			Test.Assert(actual.Count == expected.Count);
+			Test.Assert(actual.SequenceEquals(expected));
+
+		}
+		/*[Test]
 		public static void DefaultIfEmpty(){
 			
 			let data = scope List<int>();
@@ -368,7 +415,7 @@ namespace System.Linq
 			expected.Add(10);
 			Test.Assert(actual.Count == 1);
 			Test.Assert(actual[0] == 10);
-		}
+		}*/
 
 #region ToXYZ methods
 		/*[Test]

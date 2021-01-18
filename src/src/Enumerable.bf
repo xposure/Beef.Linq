@@ -49,7 +49,39 @@ namespace System.Linq
 			{
 				return .(start, end);
 			}
+
+			public struct RepeatEnumerator<TSource> : IEnumerator<TSource>, IEnumerable<TSource>
+			{
+				TSource mValue;
+				int mCount;
+
+				public this(TSource value, int count)
+				{
+					mValue = value;
+					mCount = count;
+				}
+
+				public Result<TSource> GetNext() mut
+				{
+					if (--mCount >= 0)
+						return .Ok(mValue);
+
+					return .Err;
+				}
+
+				public Self GetEnumerator()
+				{
+					return this;
+				}
+			}
+
+			public static RepeatEnumerator<TSource>
+				Repeat<TSource>(TSource value, int count)
+			{
+				return .(value, count);
+			}
 		}
+
 
 		#region Matching
 		public static bool All<TCollection, TSource, TPredicate>(this TCollection items, TPredicate predicate)
@@ -545,13 +577,13 @@ namespace System.Linq
 			return .(items.GetEnumerator(), count);
 		}
 
-		
+
 		struct TakeWhileEnumerator<TSource, TEnum, TPredicate> : Iterator<TEnum, TSource>, IEnumerator<TSource>, IEnumerable<TSource>
 			where TEnum : concrete, IEnumerator<TSource>
-			where TPredicate: delegate bool (TSource)
+			where TPredicate : delegate bool(TSource)
 		{
 			TPredicate mPredicate;
-			
+
 
 			public this(TEnum enumerator, TPredicate predicate) : base(enumerator)
 			{
@@ -560,8 +592,8 @@ namespace System.Linq
 
 			public Result<TSource> GetNext() mut
 			{
-				if(mEnum.GetNext() case .Ok(let val))
-					if(mPredicate(val))
+				if (mEnum.GetNext() case .Ok(let val))
+					if (mPredicate(val))
 						return .Ok(val);
 
 				return .Err;
@@ -576,7 +608,7 @@ namespace System.Linq
 		public static TakeWhileEnumerator<TSource, decltype(default(TCollection).GetEnumerator()), TPredicate>
 			TakeWhile<TCollection, TSource, TPredicate>(this TCollection items, TPredicate predicate)
 			where TCollection : concrete, IEnumerable<TSource>
-			where TPredicate: delegate bool(TSource)
+			where TPredicate : delegate bool(TSource)
 		{
 			return .(items.GetEnumerator(), predicate);
 		}
@@ -616,11 +648,11 @@ namespace System.Linq
 
 		struct SkipWhileEnumerator<TSource, TEnum, TPredicate> : Iterator<TEnum, TSource>, IEnumerator<TSource>, IEnumerable<TSource>
 			where TEnum : concrete, IEnumerator<TSource>
-			where TPredicate: delegate bool (TSource)
+			where TPredicate : delegate bool(TSource)
 		{
 			TPredicate mPredicate;
 			int mState = 0;
-			
+
 			public this(TEnum enumerator, TPredicate predicate) : base(enumerator)
 			{
 				mPredicate = predicate;
@@ -628,10 +660,11 @@ namespace System.Linq
 
 			public Result<TSource> GetNext() mut
 			{
-				switch(mState){
+				switch (mState) {
 				case 0:
-					while(mEnum.GetNext() case .Ok(let val)){
-						if(!mPredicate(val))
+					while (mEnum.GetNext() case .Ok(let val))
+					{
+						if (!mPredicate(val))
 						{
 							mState = 1;
 							return .Ok(val);
@@ -653,7 +686,7 @@ namespace System.Linq
 		public static SkipWhileEnumerator<TSource, decltype(default(TCollection).GetEnumerator()), TPredicate>
 			SkipWhile<TCollection, TSource, TPredicate>(this TCollection items, TPredicate predicate)
 			where TCollection : concrete, IEnumerable<TSource>
-			where TPredicate: delegate bool(TSource)
+			where TPredicate : delegate bool(TSource)
 		{
 			return .(items.GetEnumerator(), predicate);
 		}
@@ -671,9 +704,10 @@ namespace System.Linq
 
 			public Result<TSource> GetNext() mut
 			{
-				switch(mState){
+				switch (mState) {
 				case 0:
-					if(mEnum.GetNext() case .Ok(let val)){
+					if (mEnum.GetNext() case .Ok(let val))
+					{
 						mState = 1;
 						return .Ok(val);
 					}
@@ -698,6 +732,136 @@ namespace System.Linq
 			where TCollection : concrete, IEnumerable<TSource>
 		{
 			return .(items.GetEnumerator(), default);
+		}
+
+		/*struct EmptyEnumerator<TSource, TEnum> : IEnumerator<TSource>, IEnumerable<TSource>
+			where TEnum : concrete, IEnumerator<TSource>
+		{
+			public Result<TSource> GetNext() mut => .Err;
+
+			public Self GetEnumerator()
+			{
+				return this;
+			}
+		}
+
+		public static EmptyEnumerator<TSource, decltype(default(TCollection).GetEnumerator())>
+			DefaultIfEmpty<TCollection, TSource>(this TCollection items, TSource defaultValue = default)
+			where TCollection : concrete, IEnumerable<TSource>
+		{
+			return .(items.GetEnumerator(), default);
+		}*/
+
+		struct DistinctEnumerator<TSource, TEnum> : IEnumerator<TSource>, IEnumerable<TSource>, IDisposable
+			where TEnum : concrete, IEnumerator<TSource>
+			where TSource: IHashable
+		{
+			HashSet<TSource> mDistinctValues;
+			HashSet<TSource>.Enumerator mEnum;
+			Iterator<TEnum, TSource> mIterator;
+			int mState = 0;
+
+			public this(TEnum enumerator)
+			{
+				mIterator = .(enumerator);
+				mDistinctValues = new .();
+				mEnum = default;
+			}
+
+			public Result<TSource> GetNext() mut
+			{
+				switch (mState) {
+				case 0:
+					var enumerator = mIterator.mEnum;
+					while (enumerator.GetNext() case .Ok(let val))
+						mDistinctValues.Add(val);
+
+					mIterator.Dispose();
+					mIterator = default;
+					mEnum = mDistinctValues.GetEnumerator();
+					mState = 1;
+					fallthrough;
+				case 1:
+					return mEnum.GetNext();
+				}
+
+				return .Err;
+			}
+
+			public Self GetEnumerator()
+			{
+				return this;
+			}
+
+			public void Dispose() mut
+			{
+				mEnum.Dispose();
+				DeleteAndNullify!(mDistinctValues);
+			}
+		}
+
+		public static DistinctEnumerator<TSource, decltype(default(TCollection).GetEnumerator())>
+			Distinct<TCollection, TSource>(this TCollection items)
+			where TCollection : concrete, IEnumerable<TSource>
+			where TSource: IHashable
+		{
+			return .(items.GetEnumerator());
+		}
+
+
+		struct ReverseEnumerator<TSource, TEnum> : IEnumerator<TSource>, IEnumerable<TSource>, IDisposable
+			where TEnum : concrete, IEnumerator<TSource>
+		{
+			List<TSource> mCopyValues;
+			List<TSource>.Enumerator mEnum;
+			Iterator<TEnum, TSource> mIterator;
+			int mIndex = -1;
+
+			public this(TEnum enumerator)
+			{
+				mIterator = .(enumerator);
+				mCopyValues = new .();
+				mEnum = default;
+			}
+
+			public Result<TSource> GetNext() mut
+			{
+				switch (mIndex) {
+				case -1:
+					var enumerator = mIterator.mEnum;
+					while (enumerator.GetNext() case .Ok(let val))
+						mCopyValues.Add(val);
+
+					mIterator.Dispose();
+					mIterator = default;
+					mEnum = mCopyValues.GetEnumerator();
+					mIndex = 1;
+					fallthrough;
+				default:
+					if(--mIndex >= 0)
+						return .Ok(mCopyValues[mIndex]);
+
+					return .Err;
+				}
+			}
+
+			public Self GetEnumerator()
+			{
+				return this;
+			}
+
+			public void Dispose() mut
+			{
+				mEnum.Dispose();
+				DeleteAndNullify!(mCopyValues);
+			}
+		}
+
+		public static ReverseEnumerator<TSource, decltype(default(TCollection).GetEnumerator())>
+			Reverse<TCollection, TSource>(this TCollection items)
+			where TCollection : concrete, IEnumerable<TSource>
+		{
+			return .(items.GetEnumerator());
 		}
 
 		struct MapEnumerator<TSource, TEnum, TResult> : Iterator<TEnum, TSource>, IEnumerator<TResult>, IEnumerable<TResult>
@@ -784,20 +948,20 @@ namespace System.Linq
 #endregion
 
 #region ToXYZ methods
-		public static void ToDictionary<TCollection, TSource, TKeyDlg, TKey, TValueDlg, TValue>(this TCollection items, TKeyDlg keyDlg, TValueDlg valueDlg,  Dictionary<TKey, TValue> output)
+		public static void ToDictionary<TCollection, TSource, TKeyDlg, TKey, TValueDlg, TValue>(this TCollection items, TKeyDlg keyDlg, TValueDlg valueDlg, Dictionary<TKey, TValue> output)
 			where TCollection : concrete, IEnumerable<TSource>
-			where TKey: IHashable
-			where TKeyDlg: delegate TKey(TSource)
-			where TValueDlg: delegate TValue(TSource)
+			where TKey : IHashable
+			where TKeyDlg : delegate TKey(TSource)
+			where TValueDlg : delegate TValue(TSource)
 		{
 			for (var it in items)
 				output.Add(keyDlg(it), valueDlg(it));
 		}
 
-		public static void ToDictionary<TCollection, TSource, TKeyDlg, TKey>(this TCollection items, TKeyDlg keyDlg,  Dictionary<TKey, TSource> output)
+		public static void ToDictionary<TCollection, TSource, TKeyDlg, TKey>(this TCollection items, TKeyDlg keyDlg, Dictionary<TKey, TSource> output)
 			where TCollection : concrete, IEnumerable<TSource>
-			where TKey: IHashable
-			where TKeyDlg: delegate TKey(TSource)
+			where TKey : IHashable
+			where TKeyDlg : delegate TKey(TSource)
 		{
 			for (var it in items)
 				output.Add(keyDlg(it), it);
@@ -805,7 +969,7 @@ namespace System.Linq
 
 		public static void ToHashSet<TCollection, TSource>(this TCollection items, HashSet<TSource> output)
 			where TCollection : concrete, IEnumerable<TSource>
-			where TSource: IHashable
+			where TSource : IHashable
 		{
 			for (var it in items)
 				output.Add(it);
@@ -817,6 +981,6 @@ namespace System.Linq
 			for (var it in items)
 				output.Add(it);
 		}
-#endregion 
+#endregion
 	}
 }
