@@ -754,7 +754,7 @@ namespace System.Linq
 
 		struct DistinctEnumerator<TSource, TEnum> : IEnumerator<TSource>, IEnumerable<TSource>, IDisposable
 			where TEnum : concrete, IEnumerator<TSource>
-			where TSource: IHashable
+			where TSource : IHashable
 		{
 			HashSet<TSource> mDistinctValues;
 			HashSet<TSource>.Enumerator mEnum;
@@ -803,7 +803,7 @@ namespace System.Linq
 		public static DistinctEnumerator<TSource, decltype(default(TCollection).GetEnumerator())>
 			Distinct<TCollection, TSource>(this TCollection items)
 			where TCollection : concrete, IEnumerable<TSource>
-			where TSource: IHashable
+			where TSource : IHashable
 		{
 			return .(items.GetEnumerator());
 		}
@@ -838,7 +838,7 @@ namespace System.Linq
 					mIndex = 1;
 					fallthrough;
 				default:
-					if(--mIndex >= 0)
+					if (--mIndex >= 0)
 						return .Ok(mCopyValues[mIndex]);
 
 					return .Err;
@@ -982,5 +982,97 @@ namespace System.Linq
 				output.Add(it);
 		}
 #endregion
+
+		/*public static TSource
+			Aggregate<TCollection, TSource, TAccumulate>(this TCollection items, TAccumulate accumulate)
+			where TCollection : concrete, IEnumerable<TSource>
+			where TAccumulate : delegate TSource(TSource, TSource)
+		{
+			if (InternalAggregate(items, default(TSource), accumulate, let result))
+				return result;
+
+			Runtime.FatalError("No elements in the sequence.");
+		}
+
+		public static TAccumulate
+			Aggregate<TCollection, TSource, TAccumulate, TAccDlg>(this TCollection items, TAccumulate seed, TAccDlg accumulate)
+			where TCollection : concrete, IEnumerable<TSource>
+			where TAccDlg : delegate TAccumulate(TAccumulate, TSource)
+		{
+			if (InternalAggregate(items, default(TAccumulate), accumulate, let result))
+				return result;
+
+			return seed;
+		}
+
+		public static TResult
+			Aggregate<TCollection, TSource, TAccumulate, TAccDlg, TResult, TResDlg>(this TCollection items, TAccumulate seed, TAccDlg accumulate, TResDlg resultSelector)
+			where TCollection : concrete, IEnumerable<TSource>
+			where TAccDlg : delegate TAccumulate(TAccumulate, TSource)
+			where TResDlg : delegate TResult(TAccumulate)
+		{
+			if (InternalAggregate(items, default(TAccumulate), accumulate, let result))
+				return resultSelector(result);
+
+			return resultSelector(seed);
+		}
+
+
+		internal static bool InternalAggregate<TCollection, TSource, TAccumulate, TAccDlg>(TCollection items, TAccumulate seed, TAccDlg func, out TAccumulate result)
+			where TCollection : concrete, IEnumerable<TSource>
+			where TAccDlg : delegate TAccumulate(TAccumulate, TSource)
+		{
+			TAccumulate sum = seed;
+			var accumulated = false;
+			using (let iterator = Iterator.Wrap<TCollection, TSource>(items))
+			{
+				var enumerator = iterator.mEnum;
+
+				if (enumerator.GetNext() case .Ok(let val))
+				{
+					sum = func(sum, val);
+					accumulated = true;
+				}
+
+				if (accumulated)
+					while (enumerator.GetNext() case .Ok(let val))
+						sum = func(sum, val);
+			}
+
+			result = sum;
+			return accumulated;
+		}*/
+
+		
+		struct OfTypeEnumerator<TSource, TEnum, TOf> : Iterator<TEnum, TSource>, IEnumerator<TOf>, IEnumerable<TOf>
+			where TEnum : concrete, IEnumerator<TSource>
+			where TSource: class
+		{
+			public this(TEnum enumerator) : base(enumerator)
+			{
+			}
+
+			public Result<TOf> GetNext() mut
+			{
+				while(mEnum.GetNext() case .Ok(let val))
+				{
+					if(val is TOf)
+						return .Ok(*(TOf*)Internal.UnsafeCastToPtr(val));
+				}
+				return .Err;
+			}
+
+			public Self GetEnumerator()
+			{
+				return this;
+			}
+		}
+
+		public static OfTypeEnumerator<TSource, decltype(default(TCollection).GetEnumerator()), TOf>
+			OfType<TCollection, TSource, TOf>(this TCollection items)
+			where TCollection : concrete, IEnumerable<TSource>
+		{
+			return .(items.GetEnumerator());
+		}
 	}
 }
