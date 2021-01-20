@@ -1025,7 +1025,7 @@ namespace System.Linq
 		}
 #endregion
 
-		/*public static TSource
+		public static TSource
 			Aggregate<TCollection, TSource, TAccumulate>(this TCollection items, TAccumulate accumulate)
 			where TCollection : concrete, IEnumerable<TSource>
 			where TAccumulate : delegate TSource(TSource, TSource)
@@ -1037,31 +1037,45 @@ namespace System.Linq
 		}
 
 		public static TAccumulate
-			Aggregate<TCollection, TSource, TAccumulate, TAccDlg>(this TCollection items, TAccumulate seed, TAccDlg
-		accumulate) where TCollection : concrete, IEnumerable<TSource> where TAccDlg : delegate TAccumulate(TAccumulate,
-		TSource)
+			Aggregate<TCollection, TSource, TAccumulate, TAccDlg>(this TCollection items, TAccumulate seed, TAccDlg accumulate)
+			where TCollection : concrete, IEnumerable<TSource>
+			where TAccDlg : delegate TAccumulate(TAccumulate, TSource)
 		{
-			if (InternalAggregate(items, default(TAccumulate), accumulate, let result))
+			if (InternalAggregate(items, seed, accumulate, let result))
 				return result;
 
 			return seed;
 		}
 
 		public static TResult
-			Aggregate<TCollection, TSource, TAccumulate, TAccDlg, TResult, TResDlg>(this TCollection items, TAccumulate
-		seed, TAccDlg accumulate, TResDlg resultSelector) where TCollection : concrete, IEnumerable<TSource> where
-		TAccDlg : delegate TAccumulate(TAccumulate, TSource) where TResDlg : delegate TResult(TAccumulate)
+			Aggregate<TCollection, TSource, TAccumulate, TAccDlg, TResult, TResDlg>(this TCollection items, TAccDlg accumulate, TResDlg resultSelector)
+			where TCollection : concrete, IEnumerable<TSource>
+			where TAccDlg : delegate TAccumulate(TAccumulate, TSource)
+			where TResDlg : delegate TResult(TAccumulate)
 		{
 			if (InternalAggregate(items, default(TAccumulate), accumulate, let result))
+				return resultSelector(result);
+
+			return resultSelector(default);
+		}
+
+		public static TResult
+			Aggregate<TCollection, TSource, TAccumulate, TAccDlg, TResult, TResDlg>(this TCollection items, TAccumulate seed, TAccDlg accumulate, TResDlg resultSelector)
+			where TCollection : concrete, IEnumerable<TSource>
+			where TAccDlg : delegate TAccumulate(TAccumulate, TSource)
+			where TResDlg : delegate TResult(TAccumulate)
+		{
+			if (InternalAggregate(items, seed, accumulate, let result))
 				return resultSelector(result);
 
 			return resultSelector(seed);
 		}
 
 
-		internal static bool InternalAggregate<TCollection, TSource, TAccumulate, TAccDlg>(TCollection items,
-		TAccumulate seed, TAccDlg func, out TAccumulate result) where TCollection : concrete, IEnumerable<TSource> where
-		TAccDlg : delegate TAccumulate(TAccumulate, TSource)
+		internal static bool
+			InternalAggregate<TCollection, TSource, TAccumulate, TAccDlg>(TCollection items, TAccumulate seed, TAccDlg func, out TAccumulate result)
+			where TCollection : concrete, IEnumerable<TSource>
+			where TAccDlg : delegate TAccumulate(TAccumulate, TSource)
 		{
 			TAccumulate sum = seed;
 			var accumulated = false;
@@ -1082,7 +1096,7 @@ namespace System.Linq
 
 			result = sum;
 			return accumulated;
-		}*/
+		}
 
 
 		struct OfTypeEnumerator<TSource, TEnum, TOf> : Iterator<TEnum, TSource>, IEnumerator<TOf>, IEnumerable<TOf>
