@@ -399,11 +399,11 @@ namespace System.Linq
 				Test.Assert(actual == 20);
 			}
 
-			{
+			/*{
 				let data = scope List<int>() { 1, 2, 3, 4, 5 };
 				let actual = data.Aggregate( (sum, next) => sum + next, (result) => result * 1000f);
 				Test.Assert(actual == 15000f);
-			}
+			}*/
 
 			{
 				let data = scope List<int>() { 1, 2, 3, 4, 5 };

@@ -8,7 +8,7 @@ namespace System.Linq
 	{
 		public static class Enumerable
 		{
-			public struct EmptyEnumerator<TSource> : IEnumerable<TSource>, IEnumerator<TSource>
+			public struct EmptyEnumerable<TSource> : IEnumerable<TSource>, IEnumerator<TSource>
 			{
 				public Self GetEnumerator()
 				{
@@ -21,9 +21,9 @@ namespace System.Linq
 				}
 			}
 
-			public static EmptyEnumerator<TSource> Empty<TSource>() => .();
+			public static EmptyEnumerable<TSource> Empty<TSource>() => .();
 
-			public struct RangeEnumerator<TSource> : IEnumerator<TSource>, IEnumerable<TSource>
+			public struct RangeEnumerable<TSource> : IEnumerator<TSource>, IEnumerable<TSource>
 				where TSource : operator TSource + int
 			{
 				TSource mCurrent;
@@ -50,14 +50,14 @@ namespace System.Linq
 				}
 			}
 
-			public static RangeEnumerator<TSource>
+			public static RangeEnumerable<TSource>
 				Range<TSource>(TSource count)
 				where TSource : operator TSource + int
 			{
 				return .(default, count);
 			}
 
-			public static RangeEnumerator<TSource>
+			public static RangeEnumerable<TSource>
 				Range<TSource>(TSource start, TSource end)
 				where TSource : operator TSource + int
 				where TSource : operator TSource + TSource
@@ -65,7 +65,7 @@ namespace System.Linq
 				return .(start, end);
 			}
 
-			public struct RepeatEnumerator<TSource> : IEnumerator<TSource>, IEnumerable<TSource>
+			public struct RepeatEnumerable<TSource> : IEnumerator<TSource>, IEnumerable<TSource>
 			{
 				TSource mValue;
 				int mCount;
@@ -90,7 +90,7 @@ namespace System.Linq
 				}
 			}
 
-			public static RepeatEnumerator<TSource>
+			public static RepeatEnumerable<TSource>
 				Repeat<TSource>(TSource value, int count)
 			{
 				return .(value, count);
@@ -514,7 +514,7 @@ namespace System.Linq
 			public void Dispose() mut => mEnum.Dispose();
 		}
 
-		struct SelectEnumerator<TSource, TEnum, TSelect, TResult> : Iterator<TEnum, TSource>, IEnumerator<TResult>, IEnumerable<TResult>
+		struct SelectEnumerable<TSource, TEnum, TSelect, TResult> : Iterator<TEnum, TSource>, IEnumerator<TResult>, IEnumerable<TResult>
 			where TSelect : delegate TResult(TSource)
 			where TEnum : concrete, IEnumerator<TSource>
 		{
@@ -539,7 +539,7 @@ namespace System.Linq
 			}
 		}
 
-		public static SelectEnumerator<TSource, decltype(default(TCollection).GetEnumerator()), TSelect, TResult>
+		public static SelectEnumerable<TSource, decltype(default(TCollection).GetEnumerator()), TSelect, TResult>
 			Select<TCollection, TSource, TSelect, TResult>(this TCollection items, TSelect select)
 			where TCollection : concrete, IEnumerable<TSource>
 			where TSelect : delegate TResult(TSource)
@@ -548,7 +548,7 @@ namespace System.Linq
 		}
 
 
-		struct WhereEnumerator<TSource, TEnum, TPredicate> : Iterator<TEnum, TSource>, IEnumerator<TSource>, IEnumerable<TSource>
+		struct WhereEnumerable<TSource, TEnum, TPredicate> : Iterator<TEnum, TSource>, IEnumerator<TSource>, IEnumerable<TSource>
 			where TPredicate : delegate bool(TSource)
 			where TEnum : concrete, IEnumerator<TSource>
 		{
@@ -574,7 +574,7 @@ namespace System.Linq
 			}
 		}
 
-		public static WhereEnumerator<TSource, decltype(default(TCollection).GetEnumerator()), TPredicate>
+		public static WhereEnumerable<TSource, decltype(default(TCollection).GetEnumerator()), TPredicate>
 			Where<TCollection, TSource, TPredicate>(this TCollection items, TPredicate predicate)
 			where TCollection : concrete, IEnumerable<TSource>
 			where TPredicate : delegate bool(TSource)
@@ -582,7 +582,7 @@ namespace System.Linq
 			return .(items.GetEnumerator(), predicate);
 		}
 
-		struct TakeEnumerator<TSource, TEnum> : Iterator<TEnum, TSource>, IEnumerator<TSource>, IEnumerable<TSource>
+		struct TakeEnumerable<TSource, TEnum> : Iterator<TEnum, TSource>, IEnumerator<TSource>, IEnumerable<TSource>
 			where TEnum : concrete, IEnumerator<TSource>
 		{
 			int mCount;
@@ -606,7 +606,7 @@ namespace System.Linq
 			}
 		}
 
-		public static TakeEnumerator<TSource, decltype(default(TCollection).GetEnumerator())>
+		public static TakeEnumerable<TSource, decltype(default(TCollection).GetEnumerator())>
 			Take<TCollection, TSource>(this TCollection items, int count)
 			where TCollection : concrete, IEnumerable<TSource>
 		{
@@ -614,7 +614,7 @@ namespace System.Linq
 		}
 
 
-		struct TakeWhileEnumerator<TSource, TEnum, TPredicate> : Iterator<TEnum, TSource>, IEnumerator<TSource>, IEnumerable<TSource>
+		struct TakeWhileEnumerable<TSource, TEnum, TPredicate> : Iterator<TEnum, TSource>, IEnumerator<TSource>, IEnumerable<TSource>
 			where TEnum : concrete, IEnumerator<TSource>
 			where TPredicate : delegate bool(TSource)
 		{
@@ -641,7 +641,7 @@ namespace System.Linq
 			}
 		}
 
-		public static TakeWhileEnumerator<TSource, decltype(default(TCollection).GetEnumerator()), TPredicate>
+		public static TakeWhileEnumerable<TSource, decltype(default(TCollection).GetEnumerator()), TPredicate>
 			TakeWhile<TCollection, TSource, TPredicate>(this TCollection items, TPredicate predicate)
 			where TCollection : concrete, IEnumerable<TSource>
 			where TPredicate : delegate bool(TSource)
@@ -649,7 +649,7 @@ namespace System.Linq
 			return .(items.GetEnumerator(), predicate);
 		}
 
-		struct SkipEnumerator<TSource, TEnum> : Iterator<TEnum, TSource>, IEnumerator<TSource>, IEnumerable<TSource>
+		struct SkipEnumerable<TSource, TEnum> : Iterator<TEnum, TSource>, IEnumerator<TSource>, IEnumerable<TSource>
 			where TEnum : concrete, IEnumerator<TSource>
 		{
 			int mCount;
@@ -675,14 +675,14 @@ namespace System.Linq
 			}
 		}
 
-		public static SkipEnumerator<TSource, decltype(default(TCollection).GetEnumerator())>
+		public static SkipEnumerable<TSource, decltype(default(TCollection).GetEnumerator())>
 			Skip<TCollection, TSource>(this TCollection items, int count)
 			where TCollection : concrete, IEnumerable<TSource>
 		{
 			return .(items.GetEnumerator(), count);
 		}
 
-		struct SkipWhileEnumerator<TSource, TEnum, TPredicate> : Iterator<TEnum, TSource>, IEnumerator<TSource>, IEnumerable<TSource>
+		struct SkipWhileEnumerable<TSource, TEnum, TPredicate> : Iterator<TEnum, TSource>, IEnumerator<TSource>, IEnumerable<TSource>
 			where TEnum : concrete, IEnumerator<TSource>
 			where TPredicate : delegate bool(TSource)
 		{
@@ -719,7 +719,7 @@ namespace System.Linq
 			}
 		}
 
-		public static SkipWhileEnumerator<TSource, decltype(default(TCollection).GetEnumerator()), TPredicate>
+		public static SkipWhileEnumerable<TSource, decltype(default(TCollection).GetEnumerator()), TPredicate>
 			SkipWhile<TCollection, TSource, TPredicate>(this TCollection items, TPredicate predicate)
 			where TCollection : concrete, IEnumerable<TSource>
 			where TPredicate : delegate bool(TSource)
@@ -727,7 +727,7 @@ namespace System.Linq
 			return .(items.GetEnumerator(), predicate);
 		}
 
-		struct DefaultIfEmptyEnumerator<TSource, TEnum> : Iterator<TEnum, TSource>, IEnumerator<TSource>, IEnumerable<TSource>
+		struct DefaultIfEmptyEnumerable<TSource, TEnum> : Iterator<TEnum, TSource>, IEnumerator<TSource>, IEnumerable<TSource>
 			where TEnum : concrete, IEnumerator<TSource>
 		{
 			TSource mDefaultValue;
@@ -763,39 +763,21 @@ namespace System.Linq
 			}
 		}
 
-		public static DefaultIfEmptyEnumerator<TSource, decltype(default(TCollection).GetEnumerator())>
+		public static DefaultIfEmptyEnumerable<TSource, decltype(default(TCollection).GetEnumerator())>
 			DefaultIfEmpty<TCollection, TSource>(this TCollection items)
 			where TCollection : concrete, IEnumerable<TSource>
 		{
 			return .(items.GetEnumerator(), default);
 		}
 
-		public static DefaultIfEmptyEnumerator<TSource, decltype(default(TCollection).GetEnumerator())>
+		public static DefaultIfEmptyEnumerable<TSource, decltype(default(TCollection).GetEnumerator())>
 			DefaultIfEmpty<TCollection, TSource>(this TCollection items, TSource defaultValue = default)
 			where TCollection : concrete, IEnumerable<TSource>
 		{
 			return .(items.GetEnumerator(), defaultValue);
 		}
 
-		/*struct EmptyEnumerator<TSource, TEnum> : IEnumerator<TSource>, IEnumerable<TSource>
-			where TEnum : concrete, IEnumerator<TSource>
-		{
-			public Result<TSource> GetNext() mut => .Err;
-
-			public Self GetEnumerator()
-			{
-				return this;
-			}
-		}
-
-		public static EmptyEnumerator<TSource, decltype(default(TCollection).GetEnumerator())>
-			DefaultIfEmpty<TCollection, TSource>(this TCollection items, TSource defaultValue = default)
-			where TCollection : concrete, IEnumerable<TSource>
-		{
-			return .(items.GetEnumerator(), default);
-		}*/
-
-		struct DistinctEnumerator<TSource, TEnum> : IEnumerator<TSource>, IEnumerable<TSource>, IDisposable
+		struct DistinctEnumerable<TSource, TEnum> : IEnumerator<TSource>, IEnumerable<TSource>, IDisposable
 			where TEnum : concrete, IEnumerator<TSource>
 			where TSource : IHashable
 		{
@@ -843,7 +825,7 @@ namespace System.Linq
 			}
 		}
 
-		public static DistinctEnumerator<TSource, decltype(default(TCollection).GetEnumerator())>
+		public static DistinctEnumerable<TSource, decltype(default(TCollection).GetEnumerator())>
 			Distinct<TCollection, TSource>(this TCollection items)
 			where TCollection : concrete, IEnumerable<TSource>
 			where TSource : IHashable
@@ -851,7 +833,7 @@ namespace System.Linq
 			return .(items.GetEnumerator());
 		}
 
-		struct ReverseEnumerator<TSource, TEnum> : IEnumerator<TSource>, IEnumerable<TSource>, IDisposable
+		struct ReverseEnumerable<TSource, TEnum> : IEnumerator<TSource>, IEnumerable<TSource>, IDisposable
 			where TEnum : concrete, IEnumerator<TSource>
 		{
 			List<TSource> mCopyValues;
@@ -899,14 +881,14 @@ namespace System.Linq
 			}
 		}
 
-		public static ReverseEnumerator<TSource, decltype(default(TCollection).GetEnumerator())>
+		public static ReverseEnumerable<TSource, decltype(default(TCollection).GetEnumerator())>
 			Reverse<TCollection, TSource>(this TCollection items)
 			where TCollection : concrete, IEnumerable<TSource>
 		{
 			return .(items.GetEnumerator());
 		}
 
-		struct MapEnumerator<TSource, TEnum, TResult> : Iterator<TEnum, TSource>, IEnumerator<TResult>, IEnumerable<TResult>
+		struct MapEnumerable<TSource, TEnum, TResult> : Iterator<TEnum, TSource>, IEnumerator<TResult>, IEnumerable<TResult>
 			where bool : operator TSource < TSource
 			where TSource : operator TSource - TSource
 			where TResult : operator TResult + TResult
@@ -973,7 +955,7 @@ namespace System.Linq
 			}
 		}
 
-		public static MapEnumerator<TSource, decltype(default(TCollection).GetEnumerator()), TResult>
+		public static MapEnumerable<TSource, decltype(default(TCollection).GetEnumerator()), TResult>
 			Map<TCollection, TSource, TResult>(this TCollection items, TResult min, TResult max)
 			where TCollection : concrete, IEnumerable<TSource>
 			where bool : operator TSource < TSource
@@ -1025,6 +1007,7 @@ namespace System.Linq
 		}
 #endregion
 
+#region Aggregates
 		public static TSource
 			Aggregate<TCollection, TSource, TAccumulate>(this TCollection items, TAccumulate accumulate)
 			where TCollection : concrete, IEnumerable<TSource>
@@ -1071,7 +1054,6 @@ namespace System.Linq
 			return resultSelector(seed);
 		}
 
-
 		internal static bool
 			InternalAggregate<TCollection, TSource, TAccumulate, TAccDlg>(TCollection items, TAccumulate seed, TAccDlg func, out TAccumulate result)
 			where TCollection : concrete, IEnumerable<TSource>
@@ -1097,9 +1079,15 @@ namespace System.Linq
 			result = sum;
 			return accumulated;
 		}
+		#endregion
+
+#region GroupBy
 
 
-		struct OfTypeEnumerator<TSource, TEnum, TOf> : Iterator<TEnum, TSource>, IEnumerator<TOf>, IEnumerable<TOf>
+#endregion
+
+
+		struct OfTypeEnumerable<TSource, TEnum, TOf> : Iterator<TEnum, TSource>, IEnumerator<TOf>, IEnumerable<TOf>
 			where TEnum : concrete, IEnumerator<TSource>
 			where TSource : class
 		{
@@ -1123,9 +1111,10 @@ namespace System.Linq
 			}
 		}
 
-		public static OfTypeEnumerator<TSource, decltype(default(TCollection).GetEnumerator()), TOf>
+		public static OfTypeEnumerable<TSource, decltype(default(TCollection).GetEnumerator()), TOf>
 			OfType<TCollection, TSource, TOf>(this TCollection items)
 			where TCollection : concrete, IEnumerable<TSource>
+			where TSource: class
 		{
 			return .(items.GetEnumerator());
 		}
