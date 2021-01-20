@@ -406,7 +406,7 @@ namespace System.Linq
 			Test.Assert(actual.SequenceEquals(expected));
 
 		}
-		/*[Test]
+		[Test]
 		public static void DefaultIfEmpty(){
 			
 			let data = scope List<int>();
@@ -415,7 +415,7 @@ namespace System.Linq
 			expected.Add(10);
 			Test.Assert(actual.Count == 1);
 			Test.Assert(actual[0] == 10);
-		}*/
+		}
 
 #region ToXYZ methods
 		/*[Test]
