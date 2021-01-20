@@ -238,6 +238,13 @@ namespace System.Linq
 		}
 
 		[Test]
+		public static void Empty()
+		{
+			let actual = Enumerable.Empty<int>().ToList(.. scope .());
+			Test.Assert(actual.Count == 0);
+		}
+
+		[Test]
 		public static void Range()
 		{
 			{
@@ -365,12 +372,30 @@ namespace System.Linq
 		[Test]
 		public static void DefaultIfEmpty()
 		{
-			let data = scope List<int>();
-			let actual = data.DefaultIfEmpty(10).ToList(.. scope .());
-			let expected = scope List<int>();
-			expected.Add(10);
-			Test.Assert(actual.Count == 1);
-			Test.Assert(actual[0] == 10);
+			{
+				let data = scope List<int?>();
+				let actual = data.DefaultIfEmpty().ToList(.. scope .());
+				let expected = scope List<int?>();
+				expected.Add(null);
+				Test.Assert(actual.Count == 1);
+				Test.Assert(actual[0] == null);
+			}
+			{
+				let data = scope List<int>();
+				let actual = data.DefaultIfEmpty().ToList(.. scope .());
+				let expected = scope List<int>();
+				expected.Add(10);
+				Test.Assert(actual.Count == 1);
+				Test.Assert(actual[0] == 0);
+			}
+			{
+				let data = scope List<int>();
+				let actual = data.DefaultIfEmpty(10).ToList(.. scope .());
+				let expected = scope List<int>();
+				expected.Add(10);
+				Test.Assert(actual.Count == 1);
+				Test.Assert(actual[0] == 10);
+			}
 		}
 
 #region ToXYZ methods

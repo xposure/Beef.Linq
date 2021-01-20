@@ -8,6 +8,21 @@ namespace System.Linq
 	{
 		public static class Enumerable
 		{
+			public struct EmptyEnumerator<TSource> : IEnumerable<TSource>, IEnumerator<TSource>
+			{
+				public Self GetEnumerator()
+				{
+					return this;
+				}
+
+				public Result<TSource> GetNext()
+				{
+					return .Err;
+				}
+			}
+
+			public static EmptyEnumerator<TSource> Empty<TSource>() => .();
+
 			public struct RangeEnumerator<TSource> : IEnumerator<TSource>, IEnumerable<TSource>
 				where TSource : operator TSource + int
 			{
@@ -136,6 +151,7 @@ namespace System.Linq
 
 			return false;
 		}
+
 		
 		public static bool SequenceEquals<TLeft, TRight, TSource>(this TLeft left, TRight right)
 			where TLeft : concrete, IEnumerable<TSource>
@@ -745,6 +761,13 @@ namespace System.Linq
 			{
 				return this;
 			}
+		}
+
+		public static DefaultIfEmptyEnumerator<TSource, decltype(default(TCollection).GetEnumerator())>
+			DefaultIfEmpty<TCollection, TSource>(this TCollection items)
+			where TCollection : concrete, IEnumerable<TSource>
+		{
+			return .(items.GetEnumerator(), default);
 		}
 
 		public static DefaultIfEmptyEnumerator<TSource, decltype(default(TCollection).GetEnumerator())>
