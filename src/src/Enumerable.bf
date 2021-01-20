@@ -124,7 +124,6 @@ namespace System.Linq
 
 			return false;
 		}
-
 		
 		public static bool Contains<TCollection, TSource>(this TCollection items, TSource source)
 			where TCollection : concrete, IEnumerable<TSource>
@@ -183,6 +182,36 @@ namespace System.Linq
 			var count = 0;
 			TSource sum = ?;
 			using (var iterator = Iterator.Wrap<TCollection, TSource>(items))
+			{
+				var enumerator = iterator.mEnum;
+
+				switch (enumerator.GetNext())
+				{
+				case .Ok(let val):
+					sum = val;
+					count++;
+				case .Err: return default;
+				}
+
+				while (enumerator.GetNext() case .Ok(let val))
+				{
+					sum += val;
+					count++;
+				}
+
+				return sum / count;
+			}
+		}
+
+		public static TSource Average<TCollection, TSource, TPredicate>(this TCollection items, TPredicate predicate)
+			where TCollection : concrete, IEnumerable<TSource>
+			where TSource : operator TSource / int
+			where TSource : operator TSource + TSource
+			where TPredicate: delegate bool(TSource)
+		{
+			var count = 0;
+			TSource sum = ?;
+			using (var iterator = Iterator.Wrap<TCollection, TSource>(items.Where(predicate)))
 			{
 				var enumerator = iterator.mEnum;
 
