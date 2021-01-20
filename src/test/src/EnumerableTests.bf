@@ -52,22 +52,33 @@ namespace System.Linq
 			Test.Assert(!actual);
 		}
 
-		
+
+		struct ContainsTest : IEnumerable<int>, IEnumerator<int>
+		{
+			int mState = 0;
+			public Self GetEnumerator()
+			{
+				return this;
+			}
+
+			public Result<int> GetNext() mut
+			{
+				if(mState > 3)
+					return .Err;
+
+				return .Ok(mState++);
+			}
+		}
+
 		[Test]
 		public static void Contains()
 		{
-			let data = scope List<int>();
+			let data = ContainsTest();
 
 			var actual = data.Contains(2);
-			Test.Assert(!actual);
-
-			data.Add(2);
-
-			actual = data.Contains(2);
 			Test.Assert(actual);
 
-			data.Insert(0, 3);
-			actual = data.All((it) => it == 2);
+			actual = data.Contains(4);
 			Test.Assert(!actual);
 		}
 		
