@@ -1,4 +1,4 @@
-//#define INCLUDE_FAILURES
+#define INCLUDE_FAILURES
 
 using System.Collections;
 using System;
