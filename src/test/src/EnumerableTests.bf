@@ -1,4 +1,4 @@
-#define INCLUDE_FAILURES
+//#define INCLUDE_FAILURES
 
 using System.Collections;
 using System;
@@ -477,10 +477,12 @@ namespace System.Linq
 
 #region Reported bugs
 		[Test]
-		public static void HigCallingMutatingIssue(){
+		public static void HigCallingMutatingIssue()
+		{
 			int[] test1 = scope .(10, 11, 10, 12, 13, 14, -1);
-			int val = test1.Reverse().Where((x) => x > 0 && x % 2 == 0).Sum();
+			int actual = test1.Reverse().Where((x) => x > 0 && x % 2 == 0).Sum();
 
+			Test.Assert(actual == 46);
 
 			/*int[] test1 = scope .(10, 11, 10, 12, 13, 14, -1);
 			int val = test1.Reverse().Where((x) => x > 0 && x % 2 == 0).Take(2).Sum();*/
