@@ -20,7 +20,7 @@ namespace System.Linq
 			data.Add(3);
 			data.Add(4);
 
-			 actual = data.Any((it) => it == 2);
+			actual = data.Any((it) => it == 2);
 			Test.Assert(actual);
 
 			actual = data.Any();
@@ -44,7 +44,7 @@ namespace System.Linq
 			data.Add(2);
 			data.Add(2);
 
-			 actual = data.All((it) => it == 2);
+			actual = data.All((it) => it == 2);
 			Test.Assert(actual);
 
 			data.Add(3);
@@ -52,7 +52,7 @@ namespace System.Linq
 			Test.Assert(!actual);
 		}
 
-		/*
+		
 		[Test]
 		public static void Contains()
 		{
@@ -66,78 +66,107 @@ namespace System.Linq
 			actual = data.Contains(2);
 			Test.Assert(actual);
 
-			data.InsertAt(0, 3);
+			data.Insert(0, 3);
 			actual = data.All((it) => it == 2);
 			Test.Assert(!actual);
 		}
-		*/
+		
 
 		[Test]
 		public static void Average()
 		{
-				let data = scope List<int>();
-				data.Add(1);
-				data.Add(1);
-				data.Add(2);
-				data.Add(2);
-				data.Add(4);
+			let data = scope List<int>();
+			data.Add(1);
+			data.Add(1);
+			data.Add(2);
+			data.Add(2);
+			data.Add(4);
 
-				let actual = data.Average();
+			let actual = data.Average();
 
-				Test.Assert(actual == 2);
+			Test.Assert(actual == 2);
 		}
 
 		[Test]
 		public static void Max()
 		{
-				let data = scope List<int>();
-	
-				var actual = data.Max();
-				Test.Assert(actual == default);
-	
-				data.Add(3);
-				actual = data.Max();
-				Test.Assert(actual == 3);
-	
-				data.Add(1);
-				actual = data.Max();
-				Test.Assert(actual == 3);
+			let data = scope List<int>();
+
+			var actual = data.Max();
+			Test.Assert(actual == default);
+
+			data.Add(3);
+			actual = data.Max();
+			Test.Assert(actual == 3);
+
+			data.Add(1);
+			actual = data.Max();
+			Test.Assert(actual == 3);
 		}
 
 		[Test]
 		public static void Min()
 		{
-				let data = scope List<int>();
+			let data = scope List<int>();
 
-				var actual = data.Min();
-				Test.Assert(actual == default);
+			var actual = data.Min();
+			Test.Assert(actual == default);
 
-				data.Add(3);
-				actual = data.Min();
-				Test.Assert(actual == 3);
+			data.Add(3);
+			actual = data.Min();
+			Test.Assert(actual == 3);
 
-				data.Add(1);
-				actual = data.Min();
-				Test.Assert(actual == 1);
-
+			data.Add(1);
+			actual = data.Min();
+			Test.Assert(actual == 1);
 		}
 
 		[Test]
 		public static void Sum()
 		{
-			let data = scope List<int>();
-			data.Add(1);
-			data.Add(2);
-			data.Add(3);
-			data.Add(4);
+			{
+				let data = scope List<int>();
+				data.Add(1);
+				data.Add(2);
+				data.Add(3);
+				data.Add(4);
 
-			let actual = data.Sum();
-			Test.Assert(actual == 10);
+				let actual = data.Sum();
+				Test.Assert(actual == 10);
+			}
 
+			/*{
+				let data = scope List<int?>();
+				data.Add(1);
+				data.Add(2);
+				data.Add(3);
+				data.Add(4);
+
+				let actual = data.Sum();
+				Test.Assert(actual == 10);
+			}
+
+			{
+				let data = scope List<int?>();
+				data.Add(1);
+				data.Add(null);
+				data.Add(3);
+				data.Add(4);
+
+				let actual = data.Sum();
+				Test.Assert(actual == null);
+			}
+
+			{
+				let data = scope List<int?>();
+				let actual = data.Sum();
+				Test.Assert(actual == null);
+			}*/
 		}
 
 		[Test]
-		public static void ElementAt(){
+		public static void ElementAt()
+		{
 			let data = scope List<int>();
 			data.Add(1);
 			data.Add(2);
@@ -147,8 +176,8 @@ namespace System.Linq
 			Test.Assert(actual == 1);
 		}
 
-		
-		[Test(ShouldFail=true)]
+
+		[Test(ShouldFail = true)]
 		public static void ElementAtSequenceError()
 		{
 			let data = scope List<int>();
@@ -160,7 +189,8 @@ namespace System.Linq
 		}
 
 		[Test]
-		public static void First(){
+		public static void First()
+		{
 			let data = scope List<int>();
 			data.Add(1);
 			data.Add(2);
@@ -171,23 +201,26 @@ namespace System.Linq
 		}
 
 		[Test]
-		public static void FirstOrDefault(){
+		public static void FirstOrDefault()
+		{
 			let data = scope List<int>();
 
 			let actual = data.FirstOrDefault();
 			Test.Assert(actual == default);
 		}
 
-		
-		[Test(ShouldFail= true)]
-		public static void FirstFatalOnEmpty(){
+
+		[Test(ShouldFail = true)]
+		public static void FirstFatalOnEmpty()
+		{
 			let data = scope List<int>();
 
 			data.First();
 		}
 
 		[Test]
-		public static void Last(){
+		public static void Last()
+		{
 			let data = scope List<int>();
 			data.Add(1);
 			data.Add(2);
@@ -198,15 +231,17 @@ namespace System.Linq
 		}
 
 		[Test]
-		public static void LastOrDefault(){
+		public static void LastOrDefault()
+		{
 			let data = scope List<int>();
 
 			let actual = data.LastOrDefault();
 			Test.Assert(actual == default);
 		}
 
-		[Test(ShouldFail= true)]
-		public static void LastFatalOnEmpty(){
+		[Test(ShouldFail = true)]
+		public static void LastFatalOnEmpty()
+		{
 			let data = scope List<int>();
 
 			data.Last();
@@ -216,30 +251,30 @@ namespace System.Linq
 		public static void Take()
 		{
 			let data = scope List<int>();
-			for(var i < 20)data.Add(i);
-			
+			for (var i < 20) data.Add(i);
+
 			let actual = data.Take(10).ToList(.. scope .());
 
 			let expected = scope List<int>();
-			for(var i < 10)expected.Add(i);
+			for (var i < 10) expected.Add(i);
 
 			Test.Assert(actual.Count == 10);
-			Test.Assert(actual.SequenceEquals(expected)  == true);
+			Test.Assert(actual.SequenceEquals(expected) == true);
 		}
 
 		[Test]
 		public static void Skip()
 		{
 			let data = scope List<int>();
-			for(var i < 20)data.Add(i);
-			
+			for (var i < 20) data.Add(i);
+
 			let actual = data.Skip(10).ToList(.. scope .());
 
 			let expected = scope List<int>();
-			for(var i < 10)expected.Add(i + 10);
+			for (var i < 10) expected.Add(i + 10);
 
 			Test.Assert(actual.Count == 10);
-			Test.Assert(actual.SequenceEquals(expected)  == true);
+			Test.Assert(actual.SequenceEquals(expected) == true);
 		}
 
 		[Test]
@@ -248,14 +283,13 @@ namespace System.Linq
 			{
 				let actual = Enumerable.Range(10).ToList(.. scope .());
 				let expected = scope List<int>();
-				for(var i < 10)expected.Add(i);
+				for (var i < 10) expected.Add(i);
 				Test.Assert(actual.SequenceEquals(expected) == true);
 			}
-
 			{
 				let actual = Enumerable.Range(10, 20).ToList(.. scope .());
 				let expected = scope List<int>();
-				for(var i < 10)expected.Add(i + 10);
+				for (var i < 10) expected.Add(i + 10);
 				Test.Assert(actual.SequenceEquals(expected) == true);
 			}
 		}
@@ -278,13 +312,12 @@ namespace System.Linq
 
 				Test.Assert(actual.SequenceEquals(expected));
 			}
-
 			{
 				let data = scope List<int>();
 				data.Add(0);
 				data.Add(5);
 				data.Add(10);
-				
+
 				let actual = data.Map(0, 100).ToList(.. scope .());
 
 				let expected = scope List<int>();
@@ -304,7 +337,7 @@ namespace System.Linq
 			data.Add((1, 2, 3, 4));
 			data.Add((4, 3, 2, 1));
 
-			let actual = data.Select( (it) => (x: it.x, y: it.y)).ToList(.. scope .());
+			let actual = data.Select((it) => (x: it.x, y: it.y)).ToList(.. scope .());
 
 			let expected = scope List<(int x, int y)>();
 			expected.Add((1, 2));
@@ -321,14 +354,15 @@ namespace System.Linq
 			data.Add((1, 2, 3, 4));
 			data.Add((4, 3, 2, 1));
 
-			let actual = data.Where( (it) => it.x == 1).ToList(.. scope .());
+			let actual = data.Where((it) => it.x == 1).ToList(.. scope .());
 
 			Test.Assert(actual.Count == 1);
 			Test.Assert(actual[0] == (1, 2, 3, 4));
 		}
 
 		[Test]
-		public static void TakeWhile(){
+		public static void TakeWhile()
+		{
 			let data = scope List<int>();
 			data.Add(1);
 			data.Add(1);
@@ -342,9 +376,10 @@ namespace System.Linq
 			Test.Assert(actual.Count == 2);
 		}
 
-		
+
 		[Test]
-		public static void SkipWhile(){
+		public static void SkipWhile()
+		{
 			let data = scope List<int>();
 			data.Add(1);
 			data.Add(1);
@@ -359,17 +394,19 @@ namespace System.Linq
 		}
 
 		[Test]
-		public static void Repeat(){
+		public static void Repeat()
+		{
 			let actual = Enumerable.Repeat(10, 10).ToList(.. scope .());
 			let expected = scope List<int>();
-			for(var i < 10)
+			for (var i < 10)
 				expected.Add(10);
 
 			Test.Assert(actual.SequenceEquals(expected));
 		}
 
 		[Test]
-		public static void Distinct(){
+		public static void Distinct()
+		{
 			let data = scope List<int>();
 			data.Add(1);
 			data.Add(1);
@@ -384,11 +421,11 @@ namespace System.Linq
 
 			Test.Assert(actual.Count == expected.Count);
 			Test.Assert(actual.SequenceEquals(expected));
-		
 		}
 
 		[Test]
-		public static void Reverse(){
+		public static void Reverse()
+		{
 			let data = scope List<int>();
 			data.Add(1);
 			data.Add(1);
@@ -404,35 +441,50 @@ namespace System.Linq
 
 			Test.Assert(actual.Count == expected.Count);
 			Test.Assert(actual.SequenceEquals(expected));
-
 		}
-		/*[Test]
-		public static void DefaultIfEmpty(){
-			
+
+		[Test]
+		public static void DefaultIfEmpty()
+		{
 			let data = scope List<int>();
 			let actual = data.DefaultIfEmpty(10).ToList(.. scope .());
 			let expected = scope List<int>();
 			expected.Add(10);
 			Test.Assert(actual.Count == 1);
 			Test.Assert(actual[0] == 10);
-		}*/
+		}
 
 #region ToXYZ methods
-		/*[Test]
-		public static void ToDictionary(){
-			let data = scope List<(int x, float y)>();
-			data.Add((1, 2f));
-			data.Add((4, 3f));
+		[Test]
+		public static void ToDictionary()
+		{
+			{
+				let data = scope List<(int x, float y)>();
+				data.Add((1, 2f));
+				data.Add((4, 3f));
 
-			let actual = data.ToDictionary((it) => it.x, (it) => it.y, .. scope .());
+				let actual = data.ToDictionary((it) => it.x, .. scope .());
 
-			Test.Assert(actual.Count == 2);
-			Test.Assert(actual.Contains((1, 2f)));
-			Test.Assert(actual.Contains((4, 3f)));
-		}*/
+				Test.Assert(actual.Count == 2);
+				Test.Assert(actual.Contains((1, (1, 2f))));
+				Test.Assert(actual.Contains((4, (4, 3f))));
+			}
+			{
+				let data = scope List<(int x, float y)>();
+				data.Add((1, 2f));
+				data.Add((4, 3f));
+
+				let actual = data.ToDictionary((it) => it.x, (it) => it.y, .. scope .());
+
+				Test.Assert(actual.Count == 2);
+				Test.Assert(actual.Contains((1, 2f)));
+				Test.Assert(actual.Contains((4, 3f)));
+			}
+		}
 
 		[Test]
-		public static void ToHashSet(){
+		public static void ToHashSet()
+		{
 			let data = scope List<int>();
 			data.Add(1);
 			data.Add(2);
@@ -444,7 +496,7 @@ namespace System.Linq
 			Test.Assert(actual.Contains(1));
 			Test.Assert(actual.Contains(2));
 		}
-#endregion 
+#endregion
 
 	}
 }

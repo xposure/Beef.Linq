@@ -125,7 +125,7 @@ namespace System.Linq
 			return false;
 		}
 
-		/*
+		
 		public static bool Contains<TCollection, TSource>(this TCollection items, TSource source)
 			where TCollection : concrete, IEnumerable<TSource>
 			where bool: operator TSource == TSource
@@ -137,52 +137,37 @@ namespace System.Linq
 
 			return false;
 		}
-		*/
-
+		
 		public static bool SequenceEquals<TLeft, TRight, TSource>(this TLeft left, TRight right)
 			where TLeft : concrete, IEnumerable<TSource>
 			where TRight : concrete, IEnumerable<TSource>
 			where bool : operator TSource == TSource
 		{
-			using (let iterator0 = Iterator<decltype(default(TLeft).GetEnumerator()), TSource>(right.GetEnumerator()))
-				using (let iterator1 = Iterator<decltype(default(TRight).GetEnumerator()), TSource>(right.GetEnumerator()))
+			using (let iterator0 = Iterator.Wrap<TLeft, TSource>(left))
+			{
+				var e0 = iterator0.mEnum;
+				using (let iterator1 = Iterator.Wrap<TRight, TSource>(right))
 				{
-					var e0 = iterator0.mEnum;
 					var e1 = iterator1.mEnum;
 					while (true)
 					{
-						switch (e0.GetNext()) {
+						switch (e0.GetNext())
+						{
 						case .Ok(let i0):
+							switch (e1.GetNext())
 							{
-								switch (e1.GetNext()) {
-								case .Ok(let i1):
-									{
-										if (i0 != i1)
-											return false;
-									}
-								case .Err:
-									{
-										switch (e1.GetNext()) {
-										case .Ok:
-											return false;
-										case .Err:
-											return true;
-										}
-									}
-								}
+							case .Ok(let i1):
+								if (i0 != i1)
+									return false;
+							case .Err:
+								return false;
 							}
 						case .Err:
-							{
-								switch (e1.GetNext()) {
-								case .Ok:
-									return false;
-								case .Err:
-									return true;
-								}
-							}
+							return e1.GetNext() case .Err;
 						}
 					}
 				}
+			}
 		}
 
 		#endregion
@@ -268,8 +253,9 @@ namespace System.Linq
 			return min;
 		}
 
-		public static TSource Sum<TCollection, TSource>(this TCollection items)
+		public static TSource Sum<TCollection, TSource, TPredicate>(this TCollection items)
 			where TCollection : concrete, IEnumerable<TSource>
+			where TPredicate : delegate bool(TSource)
 			where TSource : operator TSource + TSource
 		{
 			TSource sum = ?;
@@ -291,6 +277,11 @@ namespace System.Linq
 		public static int Count<TCollection, TSource>(this TCollection items)
 			where TCollection : concrete, IEnumerable<TSource>
 		{
+			if (typeof(TCollection) == typeof(List<TSource>))
+				return (items as List<TSource>).Count;
+			if (typeof(TCollection) == typeof(TSource[]))
+				return (items as TSource[]).Count;
+
 			var count = 0;
 			using (let iterator = Iterator.Wrap<TCollection, TSource>(items))
 			{
@@ -731,7 +722,7 @@ namespace System.Linq
 			DefaultIfEmpty<TCollection, TSource>(this TCollection items, TSource defaultValue = default)
 			where TCollection : concrete, IEnumerable<TSource>
 		{
-			return .(items.GetEnumerator(), default);
+			return .(items.GetEnumerator(), defaultValue);
 		}
 
 		/*struct EmptyEnumerator<TSource, TEnum> : IEnumerator<TSource>, IEnumerable<TSource>
@@ -808,7 +799,6 @@ namespace System.Linq
 			return .(items.GetEnumerator());
 		}
 
-
 		struct ReverseEnumerator<TSource, TEnum> : IEnumerator<TSource>, IEnumerable<TSource>, IDisposable
 			where TEnum : concrete, IEnumerator<TSource>
 		{
@@ -835,7 +825,7 @@ namespace System.Linq
 					mIterator.Dispose();
 					mIterator = default;
 					mEnum = mCopyValues.GetEnumerator();
-					mIndex = 1;
+					mIndex = mCopyValues.Count;
 					fallthrough;
 				default:
 					if (--mIndex >= 0)
@@ -995,9 +985,9 @@ namespace System.Linq
 		}
 
 		public static TAccumulate
-			Aggregate<TCollection, TSource, TAccumulate, TAccDlg>(this TCollection items, TAccumulate seed, TAccDlg accumulate)
-			where TCollection : concrete, IEnumerable<TSource>
-			where TAccDlg : delegate TAccumulate(TAccumulate, TSource)
+			Aggregate<TCollection, TSource, TAccumulate, TAccDlg>(this TCollection items, TAccumulate seed, TAccDlg
+		accumulate) where TCollection : concrete, IEnumerable<TSource> where TAccDlg : delegate TAccumulate(TAccumulate,
+		TSource)
 		{
 			if (InternalAggregate(items, default(TAccumulate), accumulate, let result))
 				return result;
@@ -1006,10 +996,9 @@ namespace System.Linq
 		}
 
 		public static TResult
-			Aggregate<TCollection, TSource, TAccumulate, TAccDlg, TResult, TResDlg>(this TCollection items, TAccumulate seed, TAccDlg accumulate, TResDlg resultSelector)
-			where TCollection : concrete, IEnumerable<TSource>
-			where TAccDlg : delegate TAccumulate(TAccumulate, TSource)
-			where TResDlg : delegate TResult(TAccumulate)
+			Aggregate<TCollection, TSource, TAccumulate, TAccDlg, TResult, TResDlg>(this TCollection items, TAccumulate
+		seed, TAccDlg accumulate, TResDlg resultSelector) where TCollection : concrete, IEnumerable<TSource> where
+		TAccDlg : delegate TAccumulate(TAccumulate, TSource) where TResDlg : delegate TResult(TAccumulate)
 		{
 			if (InternalAggregate(items, default(TAccumulate), accumulate, let result))
 				return resultSelector(result);
@@ -1018,9 +1007,9 @@ namespace System.Linq
 		}
 
 
-		internal static bool InternalAggregate<TCollection, TSource, TAccumulate, TAccDlg>(TCollection items, TAccumulate seed, TAccDlg func, out TAccumulate result)
-			where TCollection : concrete, IEnumerable<TSource>
-			where TAccDlg : delegate TAccumulate(TAccumulate, TSource)
+		internal static bool InternalAggregate<TCollection, TSource, TAccumulate, TAccDlg>(TCollection items,
+		TAccumulate seed, TAccDlg func, out TAccumulate result) where TCollection : concrete, IEnumerable<TSource> where
+		TAccDlg : delegate TAccumulate(TAccumulate, TSource)
 		{
 			TAccumulate sum = seed;
 			var accumulated = false;
@@ -1043,10 +1032,10 @@ namespace System.Linq
 			return accumulated;
 		}*/
 
-		
+
 		struct OfTypeEnumerator<TSource, TEnum, TOf> : Iterator<TEnum, TSource>, IEnumerator<TOf>, IEnumerable<TOf>
 			where TEnum : concrete, IEnumerator<TSource>
-			where TSource: class
+			where TSource : class
 		{
 			public this(TEnum enumerator) : base(enumerator)
 			{
@@ -1054,9 +1043,9 @@ namespace System.Linq
 
 			public Result<TOf> GetNext() mut
 			{
-				while(mEnum.GetNext() case .Ok(let val))
+				while (mEnum.GetNext() case .Ok(let val))
 				{
-					if(val is TOf)
+					if (val is TOf)
 						return .Ok(*(TOf*)Internal.UnsafeCastToPtr(val));
 				}
 				return .Err;
