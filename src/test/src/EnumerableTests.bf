@@ -146,11 +146,7 @@ namespace System.Linq
 		[Test]
 		public static void ElementAt()
 		{
-			let data = scope List<int>();
-			data.Add(1);
-			data.Add(2);
-			data.Add(3);
-
+			let data = scope List<int>() { 1, 2, 3};
 			let actual = data.ElementAt(1);
 			Test.Assert(actual == 1);
 		}
@@ -159,22 +155,14 @@ namespace System.Linq
 		[Test(ShouldFail = true)]
 		public static void ElementAtSequenceError()
 		{
-			let data = scope List<int>();
-			data.Add(1);
-			data.Add(2);
-			data.Add(3);
-
+			let data = scope List<int>(){ 1, 2, 3};
 			data.ElementAt(4);
 		}
 
 		[Test]
 		public static void First()
 		{
-			let data = scope List<int>();
-			data.Add(1);
-			data.Add(2);
-			data.Add(3);
-
+			let data = scope List<int>(){ 1, 2, 3};
 			let actual = data.First();
 			Test.Assert(actual == 1);
 		}
@@ -183,7 +171,6 @@ namespace System.Linq
 		public static void FirstOrDefault()
 		{
 			let data = scope List<int>();
-
 			let actual = data.FirstOrDefault();
 			Test.Assert(actual == default);
 		}
@@ -193,18 +180,13 @@ namespace System.Linq
 		public static void FirstFatalOnEmpty()
 		{
 			let data = scope List<int>();
-
 			data.First();
 		}
 
 		[Test]
 		public static void Last()
 		{
-			let data = scope List<int>();
-			data.Add(1);
-			data.Add(2);
-			data.Add(3);
-
+			let data = scope List<int>(){1, 2, 3};
 			let actual = data.Last();
 			Test.Assert(actual == 3);
 		}
@@ -213,7 +195,6 @@ namespace System.Linq
 		public static void LastOrDefault()
 		{
 			let data = scope List<int>();
-
 			let actual = data.LastOrDefault();
 			Test.Assert(actual == default);
 		}
@@ -277,28 +258,15 @@ namespace System.Linq
 		public static void Map()
 		{
 			{
-				let data = scope List<int>();
-				data.Add(0);
-				data.Add(5);
-				data.Add(10);
-
+				let data = scope List<int>(){0,5,10};
 				let actual = data.Map(0f, 1f).ToList(.. scope .());
-
-				let expected = scope List<float>();
-				expected.Add(0f);
-				expected.Add(0.5f);
-				expected.Add(1f);
+				let expected = scope List<float>(){0f, 0.5f, 1f};
 
 				Test.Assert(actual.SequenceEquals(expected));
 			}
 			{
-				let data = scope List<int>();
-				data.Add(0);
-				data.Add(5);
-				data.Add(10);
-
+				let data = scope List<int>(){0,5,10};
 				let actual = data.Map(0, 100).ToList(.. scope .());
-
 				let expected = scope List<int>();
 				expected.Add(0);
 				expected.Add(50);
@@ -312,12 +280,8 @@ namespace System.Linq
 		[Test]
 		public static void Select()
 		{
-			let data = scope List<(int x, int y, float z, float w)>();
-			data.Add((1, 2, 3, 4));
-			data.Add((4, 3, 2, 1));
-
+			let data = scope List<(int x, int y, float z, float w)>(){(1, 2, 3, 4),(4, 3, 2, 1)};
 			let actual = data.Select((it) => (x: it.x, y: it.y)).ToList(.. scope .());
-
 			let expected = scope List<(int x, int y)>();
 			expected.Add((1, 2));
 			expected.Add((4, 3));
@@ -329,12 +293,8 @@ namespace System.Linq
 		[Test]
 		public static void Where()
 		{
-			let data = scope List<(int x, int y, float z, float w)>();
-			data.Add((1, 2, 3, 4));
-			data.Add((4, 3, 2, 1));
-
+			let data = scope List<(int x, int y, float z, float w)>(){(1, 2, 3, 4),(4, 3, 2, 1)};
 			let actual = data.Where((it) => it.x == 1).ToList(.. scope .());
-
 			Test.Assert(actual.Count == 1);
 			Test.Assert(actual[0] == (1, 2, 3, 4));
 		}
@@ -342,12 +302,7 @@ namespace System.Linq
 		[Test]
 		public static void TakeWhile()
 		{
-			let data = scope List<int>();
-			data.Add(1);
-			data.Add(1);
-			data.Add(2);
-			data.Add(3);
-
+			let data = scope List<int>(){1, 1, 2, 4};
 			let actual = data.TakeWhile((it) => it == 1).ToList(.. scope .());
 			let expected = scope List<int>();
 			expected.Add(1);
@@ -359,12 +314,7 @@ namespace System.Linq
 		[Test]
 		public static void SkipWhile()
 		{
-			let data = scope List<int>();
-			data.Add(1);
-			data.Add(1);
-			data.Add(2);
-			data.Add(3);
-
+			let data = scope List<int>(){1, 1, 2, 3};
 			let actual = data.SkipWhile((it) => it == 1).ToList(.. scope .());
 			let expected = scope List<int>();
 			expected.Add(2);
@@ -386,12 +336,7 @@ namespace System.Linq
 		[Test]
 		public static void Distinct()
 		{
-			let data = scope List<int>();
-			data.Add(1);
-			data.Add(1);
-			data.Add(2);
-			data.Add(3);
-
+			let data = scope List<int>(){1,1,2,3};
 			let actual = data.Distinct().ToList(.. scope .());
 			let expected = scope List<int>();
 			expected.Add(1);
@@ -405,12 +350,7 @@ namespace System.Linq
 		[Test]
 		public static void Reverse()
 		{
-			let data = scope List<int>();
-			data.Add(1);
-			data.Add(1);
-			data.Add(2);
-			data.Add(3);
-
+			let data = scope List<int>(){1,1,2,3};
 			let actual = data.Reverse().ToList(.. scope .());
 			let expected = scope List<int>();
 			expected.Add(3);
@@ -438,10 +378,7 @@ namespace System.Linq
 		public static void ToDictionary()
 		{
 			{
-				let data = scope List<(int x, float y)>();
-				data.Add((1, 2f));
-				data.Add((4, 3f));
-
+				let data = scope List<(int x, float y)>(){(1, 2f),(4, 3f)};
 				let actual = data.ToDictionary((it) => it.x, .. scope .());
 
 				Test.Assert(actual.Count == 2);
@@ -449,10 +386,7 @@ namespace System.Linq
 				Test.Assert(actual.Contains((4, (4, 3f))));
 			}
 			{
-				let data = scope List<(int x, float y)>();
-				data.Add((1, 2f));
-				data.Add((4, 3f));
-
+				let data = scope List<(int x, float y)>(){(1, 2f),(4, 3f)};
 				let actual = data.ToDictionary((it) => it.x, (it) => it.y, .. scope .());
 
 				Test.Assert(actual.Count == 2);
@@ -464,11 +398,7 @@ namespace System.Linq
 		[Test]
 		public static void ToHashSet()
 		{
-			let data = scope List<int>();
-			data.Add(1);
-			data.Add(2);
-			data.Add(2);
-
+			let data = scope List<int>(){1,2,2};
 			let actual = data.ToHashSet(.. scope .());
 
 			Test.Assert(actual.Count == 2);
