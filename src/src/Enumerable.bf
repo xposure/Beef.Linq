@@ -211,7 +211,7 @@ namespace System.Linq
 		{
 			var count = 0;
 			TSource sum = ?;
-			using (var iterator = Iterator.Wrap<TCollection, TSource>(items.Where(predicate)))
+			using (var iterator = Iterator.Wrap(items.Where(predicate)))
 			{
 				var enumerator = iterator.mEnum;
 

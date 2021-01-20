@@ -75,13 +75,7 @@ namespace System.Linq
 		[Test]
 		public static void Average()
 		{
-			let data = scope List<int>();
-			data.Add(1);
-			data.Add(1);
-			data.Add(2);
-			data.Add(2);
-			data.Add(4);
-
+			let data = scope List<int>() { 1, 1, 2, 2, 4};
 			let actual = data.Average();
 
 			Test.Assert(actual == 2);
@@ -125,34 +119,19 @@ namespace System.Linq
 		public static void Sum()
 		{
 			{
-				let data = scope List<int>();
-				data.Add(1);
-				data.Add(2);
-				data.Add(3);
-				data.Add(4);
-
-				let actual = data.Sum();
-				Test.Assert(actual == 10);
-			}
-
-			/*{
-				let data = scope List<int?>();
-				data.Add(1);
-				data.Add(2);
-				data.Add(3);
-				data.Add(4);
-
+				let data = scope List<int>() { 1, 2, 3, 4};
 				let actual = data.Sum();
 				Test.Assert(actual == 10);
 			}
 
 			{
-				let data = scope List<int?>();
-				data.Add(1);
-				data.Add(null);
-				data.Add(3);
-				data.Add(4);
+				let data = scope List<int>() { 1, 2, 3, 4};
+				let actual = data.Sum();
+				Test.Assert(actual == 10);
+			}
 
+			{
+				let data = scope List<int?>() { 1, null, 3, 4};
 				let actual = data.Sum();
 				Test.Assert(actual == null);
 			}
@@ -161,7 +140,7 @@ namespace System.Linq
 				let data = scope List<int?>();
 				let actual = data.Sum();
 				Test.Assert(actual == null);
-			}*/
+			}
 		}
 
 		[Test]
