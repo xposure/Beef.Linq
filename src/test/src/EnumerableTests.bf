@@ -474,5 +474,17 @@ namespace System.Linq
 #endif
 #endregion
 
+
+#region Reported bugs
+		[Test]
+		public static void HigCallingMutatingIssue(){
+			int[] test1 = scope .(10, 11, 10, 12, 13, 14, -1);
+			int val = test1.Reverse().Where((x) => x > 0 && x % 2 == 0).Sum();
+
+
+			/*int[] test1 = scope .(10, 11, 10, 12, 13, 14, -1);
+			int val = test1.Reverse().Where((x) => x > 0 && x % 2 == 0).Take(2).Sum();*/
+		}
+#endregion
 	}
 }

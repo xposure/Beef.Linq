@@ -103,7 +103,7 @@ namespace System.Linq
 			where TCollection : concrete, IEnumerable<TSource>
 			where TPredicate : delegate bool(TSource)
 		{
-			using (let iterator = Iterator.Wrap<TCollection, TSource>(items))
+			using (var iterator = Iterator.Wrap(items))
 			{
 				var enumerator = iterator.mEnum;
 				switch (enumerator.GetNext())
@@ -158,10 +158,10 @@ namespace System.Linq
 			where TRight : concrete, IEnumerable<TSource>
 			where bool : operator TSource == TSource
 		{
-			using (let iterator0 = Iterator.Wrap<TLeft, TSource>(left))
+			using (var iterator0 = Iterator.Wrap<TLeft, TSource>(left))
 			{
 				var e0 = iterator0.mEnum;
-				using (let iterator1 = Iterator.Wrap<TRight, TSource>(right))
+				using (var iterator1 = Iterator.Wrap<TRight, TSource>(right))
 				{
 					var e1 = iterator1.mEnum;
 					while (true)
@@ -197,7 +197,7 @@ namespace System.Linq
 		{
 			var count = 0;
 			TSource sum = ?;
-			using (var iterator = Iterator.Wrap<TCollection, TSource>(items))
+			using (var iterator = Iterator.Wrap(items))
 			{
 				var enumerator = iterator.mEnum;
 
@@ -254,7 +254,7 @@ namespace System.Linq
 			where bool : operator TSource < TSource
 		{
 			TSource max = ?;
-			using (let iterator = Iterator.Wrap<TCollection, TSource>(items))
+			using (var iterator = Iterator.Wrap(items))
 			{
 				var enumerator = iterator.mEnum;
 				switch (enumerator.GetNext())
@@ -279,7 +279,7 @@ namespace System.Linq
 			where bool : operator TSource < TSource
 		{
 			TSource min = ?;
-			using (let iterator = Iterator.Wrap<TCollection, TSource>(items))
+			using (var iterator = Iterator.Wrap<TCollection, TSource>(items))
 			{
 				var enumerator = iterator.mEnum;
 				switch (enumerator.GetNext())
@@ -304,7 +304,7 @@ namespace System.Linq
 			where TSource : operator TSource + TSource
 		{
 			TSource sum = ?;
-			using (let iterator = Iterator.Wrap<TCollection, TSource>(items))
+			using (var iterator = Iterator.Wrap(items))
 			{
 				var enumerator = iterator.mEnum;
 				switch (enumerator.GetNext())
@@ -328,7 +328,7 @@ namespace System.Linq
 				return (items as TSource[]).Count;
 
 			var count = 0;
-			using (let iterator = Iterator.Wrap<TCollection, TSource>(items))
+			using (var iterator = Iterator.Wrap<TCollection, TSource>(items))
 			{
 				var enumerator = iterator.mEnum;
 				while (enumerator.GetNext() case .Ok)
@@ -345,7 +345,7 @@ namespace System.Linq
 			where TCollection : concrete, IEnumerable<TSource>
 		{
 			var index;
-			using (let iterator = Iterator.Wrap<TCollection, TSource>(items))
+			using (var iterator = Iterator.Wrap(items))
 			{
 				var enumerator = iterator.mEnum;
 				while (--index > 0)
@@ -383,7 +383,7 @@ namespace System.Linq
 		public static bool InternalFirst<TCollection, TSource>(TCollection items, out TSource val)
 			where TCollection : concrete, IEnumerable<TSource>
 		{
-			using (let iterator = Iterator.Wrap<TCollection, TSource>(items))
+			using (var iterator = Iterator.Wrap<TCollection, TSource>(items))
 			{
 				var enumerator = iterator.mEnum;
 				if (enumerator.GetNext() case .Ok(out val))
@@ -414,7 +414,7 @@ namespace System.Linq
 			where TCollection : concrete, IEnumerable<TSource>
 		{
 			var found = false;
-			using (let iterator = Iterator.Wrap<TCollection, TSource>(items))
+			using (var iterator = Iterator.Wrap(items))
 			{
 				var enumerator = iterator.mEnum;
 				if (enumerator.GetNext() case .Ok(out val))
@@ -448,7 +448,7 @@ namespace System.Linq
 		internal static bool InternalSingle<TCollection, TSource>(TCollection items, out TSource val)
 			where TCollection : concrete, IEnumerable<TSource>
 		{
-			using (let iterator = Iterator.Wrap<TCollection, TSource>(items))
+			using (var iterator = Iterator.Wrap<TCollection, TSource>(items))
 			{
 				var enumerator = iterator.mEnum;
 
@@ -505,7 +505,7 @@ namespace System.Linq
 			}
 
 			[SkipCall]
-			public void Dispose() { }
+			public void Dispose() mut { }
 
 		}
 
@@ -1061,7 +1061,7 @@ namespace System.Linq
 		{
 			TAccumulate sum = seed;
 			var accumulated = false;
-			using (let iterator = Iterator.Wrap<TCollection, TSource>(items))
+			using (var iterator = Iterator.Wrap(items))
 			{
 				var enumerator = iterator.mEnum;
 
@@ -1082,7 +1082,56 @@ namespace System.Linq
 		#endregion
 
 #region GroupBy
+		struct GroupByEnumerable<TSource, TEnum, TResult> : IEnumerator<TSource>, IEnumerable<TSource>, IDisposable
+			where TEnum : concrete, IEnumerator<TSource>
+			where bool: operator TSource == TSource
+		{
+			List<TSource> mCopyValues;
+			List<TSource>.Enumerator mEnum;
+			Iterator<TEnum, TSource> mIterator;
+			int mIndex = -1;
 
+			public this(TEnum enumerator)
+			{
+				mIterator = .(enumerator);
+				mCopyValues = new .();
+				mEnum = default;
+			}
+
+			public Result<TSource> GetNext() mut
+			{
+				switch (mIndex) {
+				case -1:
+					var enumerator = mIterator.mEnum;
+					while (enumerator.GetNext() case .Ok(let val))
+						mCopyValues.Add(val);
+
+					mIterator.Dispose();
+					mIterator = default;
+					mCopyValues.Sort(scope (l, r) => l == r ? 0 : 1);
+
+					mEnum = mCopyValues.GetEnumerator();
+					mIndex = mCopyValues.Count;
+					fallthrough;
+				default:
+					if (--mIndex >= 0)
+						return .Ok(mCopyValues[mIndex]);
+
+					return .Err;
+				}
+			}
+
+			public Self GetEnumerator()
+			{
+				return this;
+			}
+
+			public void Dispose() mut
+			{
+				mEnum.Dispose();
+				DeleteAndNullify!(mCopyValues);
+			}
+		}
 
 #endregion
 
