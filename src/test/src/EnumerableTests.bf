@@ -445,13 +445,66 @@ namespace System.Linq
 #endregion
 
 #region GroupBy
+
+		/*public static mixin GroupBy<TCollection, TSource, TKey, TKeyDlg>(this TCollection items, TKey key)
+			where TCollection : concrete, IEnumerable<TSource>
+			where TKeyDlg : delegate TKey(TSource)
+		{
+			let groupByMemory = scope:mixin GroupByMemory();
+			return InternalGroupBy(groupByMemory, items, key);
+		}*/
+
 		[Test]
 		public static void GroupBy()
 		{
 			{
 				let data = scope List<(int x, int y, int z)>() { (0, 1, 9), (0, 2, 8), (2, 4, 5), (1, 1, 1), (2, 2, 2) };
-				let actual = data.GroupBy((key) => key.x).ToList(.. scope .());
+				let results = scope List<(int key, List<(int x, int y, int z)> value)>();
 
+				Dictionary<int, List<(int x, int y, int z)>> groupby = null;
+				{
+					groupby = scope Dictionary<int, List<(int x, int y, int z)>>();
+					for (var it in data)
+					{
+						if (groupby.TryAdd(it.x, ?, var ptr))
+							*ptr = new .();
+
+						(*ptr).Add(it);
+					}
+
+					for(var it in groupby){
+						results.Add(it);
+					}
+				}
+
+
+				for(var it in results)
+				{
+					it.value; //exception, temp lists were freed
+				}
+
+
+
+
+				/*//c#
+				let data = scope List<(int x, int y, int z)>() { (0, 1, 9), (0, 2, 8), (2, 4, 5), (1, 1, 1), (2, 2, 2) };
+				let actual = data.GroupBy(key => key.x) .ToList();
+				//during groupby enumeration it created several instances of Grouping[] this is stored in the enumerator
+				//ToList grabbed references to this data, so the gc is still keeping Grouping[] alive
+				//Therefor actual[0].values is still a valid reference to Grouping[0]
+
+
+				//beef
+				let data = scope List<(int x, int y, int z)>() { (0, 1, 9), (0, 2, 8), (2, 4, 5), (1, 1, 1), (2, 2, 2) };
+				let actual = data.GroupBy((key) => key.x).ToList(.. scope .());
+				//during groupby enumeration it created a list of dictionary lists
+				//ToList for each'ed these to a scoped list and then called dispose on groupby enumerable
+				//actual[0].values points to deleted memory of Grouping[0]
+
+
+				let linq = scope Linq();
+				let data = scope List<(int x, int y, int z)>() { (0, 1, 9), (0, 2, 8), (2, 4, 5), (1, 1, 1), (2, 2, 2) };
+				let actual = data.GroupBy(linq, (key) => key.x).ToList(.. scope .());
 
 				Test.Assert(actual.Count == 3);
 
@@ -466,7 +519,7 @@ namespace System.Linq
 					}
 				}
 
-				Test.Assert(i == 7);
+				Test.Assert(i == 7);*/
 			}
 		}
 
