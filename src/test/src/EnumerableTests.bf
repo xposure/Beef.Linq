@@ -459,67 +459,22 @@ namespace System.Linq
 		{
 			{
 				let data = scope List<(int x, int y, int z)>() { (0, 1, 9), (0, 2, 8), (2, 4, 5), (1, 1, 1), (2, 2, 2) };
-				let results = scope List<(int key, List<(int x, int y, int z)> value)>();
-
-				Dictionary<int, List<(int x, int y, int z)>> groupby = null;
-				{
-					groupby = scope Dictionary<int, List<(int x, int y, int z)>>();
-					for (var it in data)
-					{
-						if (groupby.TryAdd(it.x, ?, var ptr))
-							*ptr = new .();
-
-						(*ptr).Add(it);
-					}
-
-					for(var it in groupby){
-						results.Add(it);
-					}
-				}
-
-
-				for(var it in results)
-				{
-					it.value; //exception, temp lists were freed
-				}
-
-
-
-
-				/*//c#
-				let data = scope List<(int x, int y, int z)>() { (0, 1, 9), (0, 2, 8), (2, 4, 5), (1, 1, 1), (2, 2, 2) };
-				let actual = data.GroupBy(key => key.x) .ToList();
-				//during groupby enumeration it created several instances of Grouping[] this is stored in the enumerator
-				//ToList grabbed references to this data, so the gc is still keeping Grouping[] alive
-				//Therefor actual[0].values is still a valid reference to Grouping[0]
-
-
-				//beef
-				let data = scope List<(int x, int y, int z)>() { (0, 1, 9), (0, 2, 8), (2, 4, 5), (1, 1, 1), (2, 2, 2) };
-				let actual = data.GroupBy((key) => key.x).ToList(.. scope .());
-				//during groupby enumeration it created a list of dictionary lists
-				//ToList for each'ed these to a scoped list and then called dispose on groupby enumerable
-				//actual[0].values points to deleted memory of Grouping[0]
-
-
-				let linq = scope Linq();
-				let data = scope List<(int x, int y, int z)>() { (0, 1, 9), (0, 2, 8), (2, 4, 5), (1, 1, 1), (2, 2, 2) };
-				let actual = data.GroupBy(linq, (key) => key.x).ToList(.. scope .());
+				let actual =  From!(data).GroupBy((key) => key.x).ToList(.. scope .());
 
 				Test.Assert(actual.Count == 3);
 
 				var i = 0;
 				for (var it in actual)
 				{
-					switch (it.key)
+					switch (it.Key)
 					{
-					case 0: Test.Assert(it.values.SequenceEquals(scope List<(int x, int y, int z)>() { (0, 1, 9), (0, 2, 8) })); i |= 1;
-					case 1: Test.Assert(it.values.SequenceEquals(scope List<(int x, int y, int z)>() { (1, 1, 1) })); i |= 2;
-					case 2: Test.Assert(it.values.SequenceEquals(scope List<(int x, int y, int z)>() { (2, 4, 5), (2, 2, 2) })); i |= 4;
+					case 0: Test.Assert(it.SequenceEquals(scope List<(int x, int y, int z)>() { (0, 1, 9), (0, 2, 8) })); i |= 1;
+					case 1: Test.Assert(it.SequenceEquals(scope List<(int x, int y, int z)>() { (1, 1, 1) })); i |= 2;
+					case 2: Test.Assert(it.SequenceEquals(scope List<(int x, int y, int z)>() { (2, 4, 5), (2, 2, 2) })); i |= 4;
 					}
 				}
 
-				Test.Assert(i == 7);*/
+				Test.Assert(i == 7);
 			}
 		}
 
@@ -559,12 +514,9 @@ namespace System.Linq
 		public static void HigCallingMutatingIssue()
 		{
 			int[] test1 = scope .(10, 11, 10, 12, 13, 14, -1);
-			int actual = test1.Reverse().Where((x) => x > 0 && x % 2 == 0).Sum();
+			let actual = test1.Reverse().Where((x) => x > 0 && x % 2 == 0).Sum();
 
 			Test.Assert(actual == 46);
-
-			/*int[] test1 = scope .(10, 11, 10, 12, 13, 14, -1);
-			int val = test1.Reverse().Where((x) => x > 0 && x % 2 == 0).Take(2).Sum();*/
 		}
 #endregion
 	}
