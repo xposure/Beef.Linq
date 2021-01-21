@@ -392,7 +392,6 @@ namespace System.Linq
 				let actual = data.Aggregate((sum, next) => sum + next);
 				Test.Assert(actual == 15);
 			}
-
 			{
 				let data = scope List<int>() { 1, 2, 3, 4, 5 };
 				let actual = data.Aggregate(5, (sum, next) => sum + next);
@@ -404,7 +403,6 @@ namespace System.Linq
 				let actual = data.Aggregate( (sum, next) => sum + next, (result) => result * 1000f);
 				Test.Assert(actual == 15000f);
 			}*/
-
 			{
 				let data = scope List<int>() { 1, 2, 3, 4, 5 };
 				let actual = data.Aggregate(5, (sum, next) => sum + next, (result) => result * 1000f);
@@ -444,6 +442,34 @@ namespace System.Linq
 			Test.Assert(actual.Contains(1));
 			Test.Assert(actual.Contains(2));
 		}
+#endregion
+
+#region GroupBy
+		[Test]
+		public static void GroupBy()
+		{
+			{
+				let data = scope List<(int x, int y, int z)>() { (0, 1, 9), (0, 2, 8), (2, 4, 5), (1, 1, 1), (2, 2, 2) };
+				let actual = data.GroupBy((key) => key.x).ToList(.. scope .());
+
+
+				Test.Assert(actual.Count == 3);
+
+				var i = 0;
+				for (var it in actual)
+				{
+					switch (it.key)
+					{
+					case 0: Test.Assert(it.values.SequenceEquals(scope List<(int x, int y, int z)>() { (0, 1, 9), (0, 2, 8) })); i |= 1;
+					case 1: Test.Assert(it.values.SequenceEquals(scope List<(int x, int y, int z)>() { (1, 1, 1) })); i |= 2;
+					case 2: Test.Assert(it.values.SequenceEquals(scope List<(int x, int y, int z)>() { (2, 4, 5), (2, 2, 2) })); i |= 4;
+					}
+				}
+
+				Test.Assert(i == 7);
+			}
+		}
+
 #endregion
 
 

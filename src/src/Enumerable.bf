@@ -506,12 +506,37 @@ namespace System.Linq
 
 			[SkipCall]
 			public void Dispose() mut { }
-
 		}
 
 		extension Iterator<TEnum, TSource> : IDisposable where TEnum : IDisposable
 		{
 			public void Dispose() mut => mEnum.Dispose();
+		}
+
+		struct Wrap
+		{
+			public static WrapEnumerable<decltype(default(TCollection).GetEnumerator()), TSource> Wrap<TCollection, TSource>(TCollection items)
+				where TCollection : concrete, IEnumerable<TSource>
+			{
+				return .(items.GetEnumerator());
+			}
+		}
+
+		struct WrapEnumerable<TEnum, TValue> : IEnumerable<TValue>, IEnumerator<TValue>
+			where TEnum: concrete, IEnumerator<TValue>
+		{
+			private TEnum mEnum;
+			public this(TEnum enumerator)
+			{
+				mEnum = enumerator;
+			}
+
+			public Self GetEnumerator()
+			{
+				return this;
+			}
+
+			public Result<TValue> GetNext() mut => mEnum.GetNext();
 		}
 
 		struct SelectEnumerable<TSource, TEnum, TSelect, TResult> : Iterator<TEnum, TSource>, IEnumerator<TResult>, IEnumerable<TResult>
@@ -1082,43 +1107,51 @@ namespace System.Linq
 		#endregion
 
 #region GroupBy
-		struct GroupByEnumerable<TSource, TEnum, TResult> : IEnumerator<TSource>, IEnumerable<TSource>, IDisposable
-			where TEnum : concrete, IEnumerator<TSource>
-			where bool: operator TSource == TSource
+		struct GroupByValues<TValue> : WrapEnumerable<List<TValue>.Enumerator, TValue>
 		{
-			List<TSource> mCopyValues;
-			List<TSource>.Enumerator mEnum;
-			Iterator<TEnum, TSource> mIterator;
-			int mIndex = -1;
+			public this(List<TValue> values):base(values.GetEnumerator()){}
+		}
 
-			public this(TEnum enumerator)
+		struct GroupByEnumerable<TSource, TEnum, TKey, TKeyDlg> :
+			IEnumerator<(TKey key, GroupByValues<TSource> values)>, IEnumerable<(TKey key, GroupByValues<TSource> values)>, IDisposable
+
+			where TEnum : concrete, IEnumerator<TSource>
+			where TKey : IHashable
+			where TKeyDlg : delegate TKey(TSource)
+
+		{
+			Dictionary<TKey, List<TSource>> _mDict = default;
+			Dictionary<TKey, List<TSource>>.Enumerator mEnum = default;
+			TKeyDlg mKeyDlg;
+			Iterator<TEnum, TSource> mIterator;
+			int mState = -1;
+
+			public this(TEnum enumerator, TKeyDlg keyDlg)
 			{
 				mIterator = .(enumerator);
-				mCopyValues = new .();
-				mEnum = default;
+				mKeyDlg = keyDlg;
 			}
 
-			public Result<TSource> GetNext() mut
+			public Result<(TKey key, GroupByValues<TSource> values)> GetNext() mut
 			{
-				switch (mIndex) {
+				switch (mState) {
 				case -1:
-					var enumerator = mIterator.mEnum;
-					while (enumerator.GetNext() case .Ok(let val))
-						mCopyValues.Add(val);
+					_mDict = new .();
+					while(mIterator.mEnum.GetNext() case .Ok(let val))
+					{
+						if(_mDict.TryAdd(mKeyDlg(val), ?, var ptr))
+							*ptr = new .();
 
-					mIterator.Dispose();
-					mIterator = default;
-					mCopyValues.Sort(scope (l, r) => l == r ? 0 : 1);
-
-					mEnum = mCopyValues.GetEnumerator();
-					mIndex = mCopyValues.Count;
+						(*ptr).Add(val);
+					}
+					mEnum = _mDict.GetEnumerator();
+					mState = 0;
 					fallthrough;
-				default:
-					if (--mIndex >= 0)
-						return .Ok(mCopyValues[mIndex]);
-
-					return .Err;
+				case 0:
+					if(mEnum.GetNext() case .Ok(let val))
+						return .Ok((val.key, .(val.value)));
 				}
+				return .Err;
 			}
 
 			public Self GetEnumerator()
@@ -1128,13 +1161,90 @@ namespace System.Linq
 
 			public void Dispose() mut
 			{
-				mEnum.Dispose();
-				DeleteAndNullify!(mCopyValues);
+				mIterator.Dispose();
+				DeleteDictionaryAndValues!(_mDict);
+				_mDict = null;
 			}
 		}
 
-#endregion
+		struct GroupByEnumerable<TSource, TEnum, TKey, TKeyDlg, TValue, TValueDlg> :
+			IEnumerator<(TKey key, GroupByValues<TValue> values)>, IEnumerable<(TKey key, GroupByValues<TValue> values)>, IDisposable
 
+			where TEnum : concrete, IEnumerator<TSource>
+			where TKey : IHashable
+			where TKeyDlg : delegate TKey(TSource)
+			where TValueDlg : delegate TValue(TSource)
+
+		{
+			Dictionary<TKey, List<TValue>> _mDict = default;
+			Dictionary<TKey, List<TValue>>.Enumerator mEnum = default;
+			TKeyDlg mKeyDlg;
+			TValueDlg mValueDlg;
+			Iterator<TEnum, TSource> mIterator;
+			int mState = -1;
+
+			public this(TEnum enumerator, TKeyDlg keyDlg, TValueDlg valueDlg)
+			{
+				mIterator = .(enumerator);
+				mKeyDlg = keyDlg;
+				mValueDlg = valueDlg;
+			}
+
+			public Result<(TKey key, GroupByValues<TValue> values)> GetNext() mut
+			{
+				switch (mState) {
+				case -1:
+					_mDict = new .();
+					while(mIterator.mEnum.GetNext() case .Ok(let val))
+					{
+						if(_mDict.TryAdd(mKeyDlg(val), ?, var ptr))
+							*ptr = new .();
+
+						(*ptr).Add(mValueDlg(val));
+					}
+					mEnum = _mDict.GetEnumerator();
+					mState = 0;
+					fallthrough;
+				case 0:
+					if(mEnum.GetNext() case .Ok(let val))
+						return .Ok((val.key, .(val.value)));
+				}
+				return .Err;
+			}
+
+			public Self GetEnumerator()
+			{
+				return this;
+			}
+
+			public void Dispose() mut
+			{
+				mIterator.Dispose();
+				DeleteDictionaryAndValues!(_mDict);
+				_mDict = null;
+			}
+		}
+
+		public static GroupByEnumerable<TSource, decltype(default(TCollection).GetEnumerator()), TKey, TKeyDlg>
+			GroupBy<TCollection, TSource, TKey, TKeyDlg>(this TCollection items, TKeyDlg key)
+			where TCollection: concrete, IEnumerable<TSource>
+			where TKeyDlg: delegate TKey(TSource)
+			where TKey: IHashable
+		{
+			return .(items.GetEnumerator(), key);
+		}
+
+		public static GroupByEnumerable<TSource, decltype(default(TCollection).GetEnumerator()), TKey, TKeyDlg, TValue, TValueDlg>
+			GroupBy<TCollection, TSource, TKey, TKeyDlg, TValue, TValueDlg>(this TCollection items, TKeyDlg key, TValueDlg value)
+			where TCollection: concrete, IEnumerable<TSource>
+			where TKey: IHashable
+			where TKeyDlg: delegate TKey(TSource)
+			where TValueDlg: delegate TValue(TSource)
+			
+		{
+			return .(items.GetEnumerator(), key, value);
+		}
+#endregion
 
 		struct OfTypeEnumerable<TSource, TEnum, TOf> : Iterator<TEnum, TSource>, IEnumerator<TOf>, IEnumerable<TOf>
 			where TEnum : concrete, IEnumerator<TSource>
