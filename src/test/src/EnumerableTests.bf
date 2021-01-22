@@ -476,6 +476,26 @@ namespace System.Linq
 
 				Test.Assert(i == 7);
 			}
+
+			{
+				let data = scope List<(int x, int y, int z)>() { (0, 1, 9), (0, 2, 8), (2, 4, 5), (1, 1, 1), (2, 2, 2) };
+				let actual =  data.GroupBy((key) => key.x, scope .()).ToList(.. scope .());
+
+				Test.Assert(actual.Count == 3);
+
+				var i = 0;
+				for (var it in actual)
+				{
+					switch (it.Key)
+					{
+					case 0: Test.Assert(it.SequenceEquals(scope List<(int x, int y, int z)>() { (0, 1, 9), (0, 2, 8) })); i |= 1;
+					case 1: Test.Assert(it.SequenceEquals(scope List<(int x, int y, int z)>() { (1, 1, 1) })); i |= 2;
+					case 2: Test.Assert(it.SequenceEquals(scope List<(int x, int y, int z)>() { (2, 4, 5), (2, 2, 2) })); i |= 4;
+					}
+				}
+
+				Test.Assert(i == 7);
+			}
 		}
 
 #endregion

@@ -139,20 +139,20 @@ namespace System.Linq
 
 			return false;
 		}
-		
+
 		public static bool Contains<TCollection, TSource>(this TCollection items, TSource source)
 			where TCollection : concrete, IEnumerable<TSource>
-			where bool: operator TSource == TSource
+			where bool : operator TSource == TSource
 		{
 			var enumerator = items.GetEnumerator();
 			while (enumerator.GetNext() case .Ok(let val))
-				if(val == source)
+				if (val == source)
 					return true;
 
 			return false;
 		}
 
-		
+
 		public static bool SequenceEquals<TLeft, TRight, TSource>(this TLeft left, TRight right)
 			where TLeft : concrete, IEnumerable<TSource>
 			where TRight : concrete, IEnumerable<TSource>
@@ -223,7 +223,7 @@ namespace System.Linq
 			where TCollection : concrete, IEnumerable<TSource>
 			where TSource : operator TSource / int
 			where TSource : operator TSource + TSource
-			where TPredicate: delegate bool(TSource)
+			where TPredicate : delegate bool(TSource)
 		{
 			var count = 0;
 			TSource sum = ?;
@@ -523,7 +523,7 @@ namespace System.Linq
 		}
 
 		struct WrapEnumerable<TEnum, TValue> : IEnumerable<TValue>, IEnumerator<TValue>
-			where TEnum: concrete, IEnumerator<TValue>
+			where TEnum : concrete, IEnumerator<TValue>
 		{
 			private TEnum mEnum;
 			public this(TEnum enumerator)
@@ -1106,6 +1106,153 @@ namespace System.Linq
 		}
 		#endregion
 
+#region GroupBy
+
+		public struct Grouping2<TKey, TValue> : IEnumerable<TValue>, IEnumerator<TValue>
+		{
+			List<TValue> mValues;
+			int mIndex = 0;
+			public readonly TKey Key;
+
+			public this(TKey key)
+			{
+				Key = key;
+				mValues = new .();
+			}
+
+			public Result<TValue> GetNext() mut
+			{
+				if (mIndex == mValues.Count)
+					return .Err;
+
+				return .Ok(mValues[mIndex++]);
+			}
+
+			public List<TValue>.Enumerator GetEnumerator()
+			{
+				return mValues.GetEnumerator();
+			}
+
+			public void Add(TValue value) mut
+			{
+				mValues.Add(value);
+			}
+		}
+
+		public class GroupByResult<TSource, TKey> :
+			IEnumerator<Grouping2<TKey, TSource>>, IRefEnumerator<Grouping2<TKey, TSource>*>, IEnumerable<Grouping2<TKey, TSource>>
+			where bool : operator TKey == TKey//where TKey : IHashable
+		{
+			DynamicArray<Grouping2<TKey, TSource>> mResults = default ~ mResults.Dispose();
+			int mIndex = -1;
+
+			public int Count => mResults.Length;
+
+			public this()
+			{
+			}
+
+			public Result<Grouping2<TKey, TSource>> GetNext()
+			{
+				if (mIndex < mResults.Length)
+					return .Ok(mResults[mIndex++]);
+
+				return .Err;
+			}
+
+			public Self GetEnumerator()
+			{
+				return this;
+			}
+
+			public Result<Grouping2<TKey, TSource>*> GetNextRef()
+			{
+				if (mIndex < mResults.Length)
+					return .Ok(&mResults[mIndex++]);
+
+				return .Err;
+			}
+
+			public ref Grouping2<TKey, TSource> this[int index] => ref mResults[index];
+
+			public void Add(Grouping2<TKey, TSource> group)
+			{
+				mResults.Add(group);
+			}
+		}
+
+		public struct GroupByEnumerable2<TSource, TEnum, TKey, TKeyDlg> :
+			IEnumerator<Grouping2<TKey, TSource>>, IEnumerable<Grouping2<TKey, TSource>>, IDisposable
+
+			where TEnum : concrete, IEnumerator<TSource>
+			where bool : operator TKey == TKey//where TKey : IHashable
+			where TKeyDlg : delegate TKey(TSource)
+		{
+			GroupByResult<TSource, TKey> mResults;
+			TKeyDlg mKeyDlg;
+			Iterator<TEnum, TSource> mIterator;
+			int mIndex = -1;
+
+			public this(GroupByResult<TSource, TKey> results, TEnum enumerator, TKeyDlg keyDlg)
+			{
+				mResults = results;
+				mIterator = .(enumerator);
+				mKeyDlg = keyDlg;
+			}
+
+			public Result<Grouping2<TKey, TSource>> GetNext() mut
+			{
+				if (mIndex == -1)
+				{
+					while (mIterator.mEnum.GetNext() case .Ok(let val))
+					{
+						let key = mKeyDlg(val);
+						var added = false;
+						for (var it in ref mResults)
+						{
+							if (it.Key == key)
+							{
+								it.Add(val);
+								added = true;
+							}
+						}
+
+						if (!added)
+						{
+							var group = mResults.Add(.. .(key));
+							group.Add(val);
+						}
+					}
+					mIndex = 0;
+				}
+
+				if (mIndex < mResults.Count)
+					return mResults[mIndex++];
+
+				return .Err;
+			}
+
+			public Self GetEnumerator()
+			{
+				return this;
+			}
+
+			public void Dispose() mut
+			{
+				mIterator.Dispose();
+			}
+		}
+
+		public static GroupByEnumerable2<TSource, decltype(default(TCollection).GetEnumerator()), TKey, TKeyDlg>
+			GroupBy2<TCollection, TSource, TKey, TKeyDlg>(this TCollection items, TKeyDlg key, GroupByResult<TSource, TKey> results)
+			where TCollection : concrete, IEnumerable<TSource>
+			where TKeyDlg : delegate TKey(TSource)
+			where TKey : IHashable
+		{
+			return .(results, items.GetEnumerator(), key);
+		}
+#endregion
+
 		struct OfTypeEnumerable<TSource, TEnum, TOf> : Iterator<TEnum, TSource>, IEnumerator<TOf>, IEnumerable<TOf>
 			where TEnum : concrete, IEnumerator<TSource>
 			where TSource : class
@@ -1133,7 +1280,7 @@ namespace System.Linq
 		public static OfTypeEnumerable<TSource, decltype(default(TCollection).GetEnumerator()), TOf>
 			OfType<TCollection, TSource, TOf>(this TCollection items)
 			where TCollection : concrete, IEnumerable<TSource>
-			where TSource: class
+			where TSource : class
 		{
 			return .(items.GetEnumerator());
 		}
