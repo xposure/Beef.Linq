@@ -1107,8 +1107,63 @@ namespace System.Linq
 		#endregion
 
 #region GroupBy
+		
+		struct DynamicArray<TValue> :  IDisposable
+		{
+			TValue[] mPtr = default;
+			Span<TValue> mSpan = default;
+			int mLength = 0;
+			int mSize = 4;
+			int mIndex = 0;
 
-		public struct Grouping2<TKey, TValue> : IEnumerable<TValue>, IEnumerator<TValue>
+			public int Length => mLength;
+
+			public this()
+			{
+				this.mPtr = new TValue[mSize];
+				this.mLength = 0;
+			}
+
+			public ref TValue this[int index] => ref mPtr[index];
+
+			public void Dispose() mut
+			{
+				DeleteAndNullify!(mPtr);
+				mPtr = null;
+			}
+			public void Add(TValue value) mut
+			{
+				if (mLength + 1 > mSize)
+				{
+					var newSize = mSize * 3 / 2;
+					var dst  = new TValue[newSize];
+					Array.Copy(mPtr, dst, mLength);
+					Swap!(mPtr, dst);
+					delete dst;
+				}
+				mPtr[mLength++] = value;
+			}
+
+			public Span<TValue>.Enumerator GetEnumerator() mut
+			{
+				mSpan = .(mPtr, 0, mLength);
+				return mSpan.GetEnumerator();
+			}
+		}
+
+		public extension DynamicArray<TValue> : IDisposable
+			where TValue: IDisposable
+		{
+			public void Dispose() mut
+			{
+				for(var it in mPtr)
+					it.Dispose();
+
+				base.Dispose();
+			}
+		}
+
+		public struct Grouping<TKey, TValue> : IEnumerable<TValue>, IEnumerator<TValue>, IDisposable, IResettable
 		{
 			List<TValue> mValues;
 			int mIndex = 0;
@@ -1118,6 +1173,11 @@ namespace System.Linq
 			{
 				Key = key;
 				mValues = new .();
+			}
+
+			public void Reset() mut
+			{
+				mIndex = 0;
 			}
 
 			public Result<TValue> GetNext() mut
@@ -1137,14 +1197,20 @@ namespace System.Linq
 			{
 				mValues.Add(value);
 			}
+
+			public void Dispose() mut
+			{
+				DeleteAndNullify!(mValues);
+			}
 		}
 
 		public class GroupByResult<TSource, TKey> :
-			IEnumerator<Grouping2<TKey, TSource>>, IRefEnumerator<Grouping2<TKey, TSource>*>, IEnumerable<Grouping2<TKey, TSource>>
+			IEnumerator<Grouping<TKey, TSource>>, IRefEnumerator<Grouping<TKey, TSource>*>, IEnumerable<Grouping<TKey, TSource>>, IResettable
 			where bool : operator TKey == TKey//where TKey : IHashable
 		{
-			DynamicArray<Grouping2<TKey, TSource>> mResults = default ~ mResults.Dispose();
-			int mIndex = -1;
+			DynamicArray<Grouping<TKey, TSource>> mResults = .()
+				~ mResults.Dispose();
+			int mIndex = 0;
 
 			public int Count => mResults.Length;
 
@@ -1152,7 +1218,12 @@ namespace System.Linq
 			{
 			}
 
-			public Result<Grouping2<TKey, TSource>> GetNext()
+			public void Reset()
+			{
+				mIndex = 0;
+			}
+
+			public Result<Grouping<TKey, TSource>> GetNext()
 			{
 				if (mIndex < mResults.Length)
 					return .Ok(mResults[mIndex++]);
@@ -1160,12 +1231,12 @@ namespace System.Linq
 				return .Err;
 			}
 
-			public Self GetEnumerator()
+			public Span<Grouping<TKey, TSource>>.Enumerator GetEnumerator()
 			{
-				return this;
+				return mResults.GetEnumerator();
 			}
 
-			public Result<Grouping2<TKey, TSource>*> GetNextRef()
+			public Result<Grouping<TKey, TSource>*> GetNextRef()
 			{
 				if (mIndex < mResults.Length)
 					return .Ok(&mResults[mIndex++]);
@@ -1173,16 +1244,16 @@ namespace System.Linq
 				return .Err;
 			}
 
-			public ref Grouping2<TKey, TSource> this[int index] => ref mResults[index];
+			public ref Grouping<TKey, TSource> this[int index] => ref mResults[index];
 
-			public void Add(Grouping2<TKey, TSource> group)
+			public void Add(Grouping<TKey, TSource> group)
 			{
 				mResults.Add(group);
 			}
 		}
 
-		public struct GroupByEnumerable2<TSource, TEnum, TKey, TKeyDlg> :
-			IEnumerator<Grouping2<TKey, TSource>>, IEnumerable<Grouping2<TKey, TSource>>, IDisposable
+		public struct GroupByEnumerable<TSource, TEnum, TKey, TKeyDlg> :
+			IEnumerator<Grouping<TKey, TSource>>, IEnumerable<Grouping<TKey, TSource>>, IDisposable
 
 			where TEnum : concrete, IEnumerator<TSource>
 			where bool : operator TKey == TKey//where TKey : IHashable
@@ -1200,7 +1271,7 @@ namespace System.Linq
 				mKeyDlg = keyDlg;
 			}
 
-			public Result<Grouping2<TKey, TSource>> GetNext() mut
+			public Result<Grouping<TKey, TSource>> GetNext() mut
 			{
 				if (mIndex == -1)
 				{
@@ -1243,8 +1314,8 @@ namespace System.Linq
 			}
 		}
 
-		public static GroupByEnumerable2<TSource, decltype(default(TCollection).GetEnumerator()), TKey, TKeyDlg>
-			GroupBy2<TCollection, TSource, TKey, TKeyDlg>(this TCollection items, TKeyDlg key, GroupByResult<TSource, TKey> results)
+		public static GroupByEnumerable<TSource, decltype(default(TCollection).GetEnumerator()), TKey, TKeyDlg>
+			GroupBy<TCollection, TSource, TKey, TKeyDlg>(this TCollection items, TKeyDlg key, GroupByResult<TSource, TKey> results)
 			where TCollection : concrete, IEnumerable<TSource>
 			where TKeyDlg : delegate TKey(TSource)
 			where TKey : IHashable

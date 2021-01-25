@@ -1,4 +1,4 @@
-using System.Collections;
+/*using System.Collections;
 using internal System.Linq;
 
 namespace System.Linq
@@ -68,50 +68,6 @@ namespace System.Linq
 		}
 	}
 
-	struct DynamicArray<TValue> :  IDisposable
-	{
-		TValue[] mPtr = default;
-		Span<TValue> mSpan = default;
-		int mLength = 0;
-		int mSize = 4;
-		int mIndex = 0;
-
-		public int Length => mLength;
-
-		public this()
-		{
-			this.mPtr = new TValue[mSize];
-			this.mLength = 0;
-		}
-
-		public ref TValue this[int index] => ref mPtr[index];
-
-		public void Dispose() mut
-		{
-			DeleteAndNullify!(mPtr);
-			mPtr = null;
-		}
-
-		public void Add(TValue value) mut
-		{
-			if (mLength + 1 > mSize)
-			{
-				var newSize = mSize * 3 / 2;
-				var dst  = new TValue[newSize];
-				Array.Copy(mPtr, dst, mLength);
-				Swap!(mPtr, dst);
-				delete dst;
-			}
-			mPtr[mLength++] = value;
-		}
-
-		public Span<TValue>.Enumerator GetEnumerator() mut
-		{
-			mSpan = .(mPtr, 0, mLength);
-			return mSpan.GetEnumerator();
-		}
-
-	}
 
 	public struct Grouping<TKey, TValue> : IEnumerable<TValue>, IEnumerator<TValue>
 	{
@@ -229,4 +185,4 @@ namespace System.Linq
 		
 
 	}
-}
+}*/
