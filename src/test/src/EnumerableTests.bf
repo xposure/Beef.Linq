@@ -454,7 +454,7 @@ namespace System.Linq
 			return InternalGroupBy(groupByMemory, items, key);
 		}*/
 
-		[Test]
+		/*[Test]
 		public static void GroupBy()
 		{
 			{
@@ -476,7 +476,7 @@ namespace System.Linq
 
 				Test.Assert(i == 7);
 			}
-		}
+		}*/
 
 #endregion
 

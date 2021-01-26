@@ -1336,6 +1336,81 @@ namespace System.Linq
 			return .(results, items.GetEnumerator(), key, scope (val) => val);
 		}*/
 #endregion
+		struct UnionEnumerable<TSource, TEnum, TEnumCount> : IEnumerator<TSource>, IEnumerable<TSource>, IDisposable
+			where TEnum : concrete, IEnumerator<TSource>
+			where TSource : IHashable
+			where TEnumCount: const int
+		
+		{
+			HashSet<TSource> mDistinctValues;
+			Iterator<TEnum, TSource>[TEnumCount] mIterator;
+			int mIndex = 0;
+
+			public this(TEnum[TEnumCount] enumerators)
+			{
+				for(var i < TEnumCount)
+					mIterator[i] = .(enumerators[i]);
+				mDistinctValues = new .();
+			}
+
+			public Result<TSource> GetNext() mut
+			{
+				while(mIndex < TEnumCount)
+				{
+					var e = mIterator[mIndex].mEnum;
+					while(e.GetNext() case .Ok(let val))
+						if(mDistinctValues.Add(val))
+							return .Ok(val);
+
+					mIndex++;
+				}
+
+				return .Err;
+			}
+
+			public Self GetEnumerator()
+			{
+				return this;
+			}
+
+			public void Dispose() mut
+			{
+				DeleteAndNullify!(mDistinctValues);
+			}
+		}
+
+		public static UnionEnumerable<TSource, decltype(default(TCollection).GetEnumerator()), const 2>
+			Union<TCollection, TSource>(this TCollection items, TCollection other)
+			where TCollection : concrete, IEnumerable<TSource>
+			where TSource : IHashable
+		{
+			return .( .(items.GetEnumerator(), other.GetEnumerator()));
+		}
+
+		/*public static UnionEnumerable<TSource, decltype(default(TCollection).GetEnumerator()), const 3>
+			Union<TCollection, TSource>(this TCollection items, TCollection other1,TCollection other2)
+			where TCollection : concrete, IEnumerable<TSource>
+			where TSource : IHashable
+		{
+			return .(items.GetEnumerator(), other1.GetEnumerator(), other2.GetEnumerator());
+		}
+
+		public static UnionEnumerable<TSource, decltype(default(TCollection).GetEnumerator()), const 4>
+			Union<TCollection, TSource>(this TCollection items, TCollection other1,TCollection other2, TCollection other3)
+			where TCollection : concrete, IEnumerable<TSource>
+			where TSource : IHashable
+		{
+			return .(items.GetEnumerator(), other1.GetEnumerator(), other2.GetEnumerator(), other3.GetEnumerator());
+		}
+
+		public static UnionEnumerable<TSource, decltype(default(TCollection).GetEnumerator()), const 5>
+			Union<TCollection, TSource>(this TCollection items, TCollection other1,TCollection other2, TCollection other3, TCollection other4)
+			where TCollection : concrete, IEnumerable<TSource>
+			where TSource : IHashable
+		{
+			return .(items.GetEnumerator(), other1.GetEnumerator(), other2.GetEnumerator(), other3.GetEnumerator(), other4.GetEnumerator());
+		}*/
+
 
 		struct OfTypeEnumerable<TSource, TEnum, TOf> : Iterator<TEnum, TSource>, IEnumerator<TOf>, IEnumerable<TOf>
 			where TEnum : concrete, IEnumerator<TSource>
