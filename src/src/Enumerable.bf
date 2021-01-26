@@ -23,8 +23,7 @@ namespace System.Linq
 
 			public static EmptyEnumerable<TSource> Empty<TSource>() => .();
 
-			public struct RangeEnumerable<TSource> : IEnumerator<TSource>, IEnumerable<TSource>
-				where TSource : operator TSource + int
+			public struct RangeEnumerable<TSource> : IEnumerator<TSource>, IEnumerable<TSource> where TSource : operator TSource + int
 			{
 				TSource mCurrent;
 				TSource mEnd;
@@ -1204,12 +1203,11 @@ namespace System.Linq
 			}
 		}
 
-		public class GroupByResult<TSource, TKey> :
-			IEnumerator<Grouping<TKey, TSource>>, IRefEnumerator<Grouping<TKey, TSource>*>, IEnumerable<Grouping<TKey, TSource>>, IResettable
+		public class GroupByResult<TKey, TValue> :
+			IEnumerator<Grouping<TKey, TValue>>, IRefEnumerator<Grouping<TKey, TValue>*>, IEnumerable<Grouping<TKey, TValue>>, IResettable
 			where bool : operator TKey == TKey//where TKey : IHashable
 		{
-			DynamicArray<Grouping<TKey, TSource>> mResults = .()
-				~ mResults.Dispose();
+			DynamicArray<Grouping<TKey, TValue>> mResults = .() ~ mResults.Dispose();
 			int mIndex = 0;
 
 			public int Count => mResults.Length;
@@ -1223,7 +1221,7 @@ namespace System.Linq
 				mIndex = 0;
 			}
 
-			public Result<Grouping<TKey, TSource>> GetNext()
+			public Result<Grouping<TKey, TValue>> GetNext()
 			{
 				if (mIndex < mResults.Length)
 					return .Ok(mResults[mIndex++]);
@@ -1231,12 +1229,12 @@ namespace System.Linq
 				return .Err;
 			}
 
-			public Span<Grouping<TKey, TSource>>.Enumerator GetEnumerator()
+			public Span<Grouping<TKey, TValue>>.Enumerator GetEnumerator()
 			{
 				return mResults.GetEnumerator();
 			}
 
-			public Result<Grouping<TKey, TSource>*> GetNextRef()
+			public Result<Grouping<TKey, TValue>*> GetNextRef()
 			{
 				if (mIndex < mResults.Length)
 					return .Ok(&mResults[mIndex++]);
@@ -1244,54 +1242,58 @@ namespace System.Linq
 				return .Err;
 			}
 
-			public ref Grouping<TKey, TSource> this[int index] => ref mResults[index];
+			public ref Grouping<TKey, TValue> this[int index] => ref mResults[index];
 
-			public void Add(Grouping<TKey, TSource> group)
+			public void Add(Grouping<TKey, TValue> group)
 			{
 				mResults.Add(group);
 			}
 		}
 
-		public struct GroupByEnumerable<TSource, TEnum, TKey, TKeyDlg> :
-			IEnumerator<Grouping<TKey, TSource>>, IEnumerable<Grouping<TKey, TSource>>, IDisposable
+		public struct GroupByEnumerable<TSource, TEnum, TKey, TKeyDlg, TValue, TValueDlg> :
+			IEnumerator<Grouping<TKey, TValue>>, IEnumerable<Grouping<TKey, TValue>>, IDisposable
 
 			where TEnum : concrete, IEnumerator<TSource>
 			where bool : operator TKey == TKey//where TKey : IHashable
 			where TKeyDlg : delegate TKey(TSource)
+			where TValueDlg: delegate TValue(TSource)
 		{
-			GroupByResult<TSource, TKey> mResults;
+			GroupByResult<TKey, TValue> mResults;
 			TKeyDlg mKeyDlg;
+			TValueDlg mValueDlg;
 			Iterator<TEnum, TSource> mIterator;
 			int mIndex = -1;
 
-			public this(GroupByResult<TSource, TKey> results, TEnum enumerator, TKeyDlg keyDlg)
+			public this(GroupByResult<TKey, TValue> results, TEnum enumerator, TKeyDlg keyDlg, TValueDlg valueDlg)
 			{
 				mResults = results;
 				mIterator = .(enumerator);
 				mKeyDlg = keyDlg;
+				mValueDlg = valueDlg;
 			}
 
-			public Result<Grouping<TKey, TSource>> GetNext() mut
+			public Result<Grouping<TKey, TValue>> GetNext() mut
 			{
 				if (mIndex == -1)
 				{
 					while (mIterator.mEnum.GetNext() case .Ok(let val))
 					{
-						let key = mKeyDlg(val);
+						let k = mKeyDlg(val);
+						let v = mValueDlg(val);
 						var added = false;
 						for (var it in ref mResults)
 						{
-							if (it.Key == key)
+							if (it.Key == k)
 							{
-								it.Add(val);
+								it.Add(v);
 								added = true;
 							}
 						}
 
 						if (!added)
 						{
-							var group = mResults.Add(.. .(key));
-							group.Add(val);
+							var group = mResults.Add(.. .(k));
+							group.Add(v);
 						}
 					}
 					mIndex = 0;
@@ -1314,14 +1316,25 @@ namespace System.Linq
 			}
 		}
 
-		public static GroupByEnumerable<TSource, decltype(default(TCollection).GetEnumerator()), TKey, TKeyDlg>
-			GroupBy<TCollection, TSource, TKey, TKeyDlg>(this TCollection items, TKeyDlg key, GroupByResult<TSource, TKey> results)
+		public static GroupByEnumerable<TSource, decltype(default(TCollection).GetEnumerator()), TKey, TKeyDlg, TSource, delegate TSource(TSource)>
+			GroupBy<TCollection, TSource, TKey, TKeyDlg>(this TCollection items, TKeyDlg key, GroupByResult<TKey, TSource> results)
 			where TCollection : concrete, IEnumerable<TSource>
 			where TKeyDlg : delegate TKey(TSource)
 			where TKey : IHashable
 		{
-			return .(results, items.GetEnumerator(), key);
+			//guess we could optimize out this scope with some code duplication
+			return .(results, items.GetEnumerator(), key, scope (val) => val);
 		}
+
+		/*public static GroupByEnumerable<TSource, decltype(default(TCollection).GetEnumerator()), TKey, TKeyDlg, TSource, delegate TSource(TSource)>
+			GroupBy<TCollection, TSource, TKey, TKeyDlg>(this TCollection items, TKeyDlg key, GroupByResult<TKey, TSource> results)
+			where TCollection : concrete, IEnumerable<TSource>
+			where TKeyDlg : delegate TKey(TSource)
+			where TKey : IHashable
+		{
+			//guess we could optimize out this scope with some code duplication
+			return .(results, items.GetEnumerator(), key, scope (val) => val);
+		}*/
 #endregion
 
 		struct OfTypeEnumerable<TSource, TEnum, TOf> : Iterator<TEnum, TSource>, IEnumerator<TOf>, IEnumerable<TOf>
