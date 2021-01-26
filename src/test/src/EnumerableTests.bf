@@ -458,8 +458,8 @@ namespace System.Linq
 		public static void GroupBy()
 		{
 			{
-				let data = scope List<(int x, int y, int z)>() { (0, 1, 9), (0, 2, 8), (2, 4, 5), (1, 1, 1), (2, 2, 2) };
-				let actual = data.GroupBy((key) => key.x, scope .()).ToList(.. scope .());
+				let data = scope List<(int x, int y, int z)>() { (0, 1, 9), (0, 2, 8), (2, 4, 5), (1, 1, 1), (2, 2, 2)
+		}; let actual = data.GroupBy((key) => key.x, scope .()).ToList(.. scope .());
 
 				Test.Assert(actual.Count == 3);
 
@@ -468,9 +468,9 @@ namespace System.Linq
 				{
 					switch (it.Key)
 					{
-					case 0: Test.Assert(it.SequenceEquals(scope List<(int x, int y, int z)>() { (0, 1, 9), (0, 2, 8)})); i |= 1;
-					case 1: Test.Assert(it.SequenceEquals(scope List<(int x, int y, int z)>() { (1, 1, 1) })); i |= 2;
-					case 2: Test.Assert(it.SequenceEquals(scope List<(int x, int y, int z)>() { (2, 4, 5), (2, 2, 2) })); i |= 4;
+					case 0: Test.Assert(it.SequenceEquals(scope List<(int x, int y, int z)>() { (0, 1, 9), (0, 2, 8)}));
+		i |= 1; case 1: Test.Assert(it.SequenceEquals(scope List<(int x, int y, int z)>() { (1, 1, 1) })); i |= 2; case
+		2: Test.Assert(it.SequenceEquals(scope List<(int x, int y, int z)>() { (2, 4, 5), (2, 2, 2) })); i |= 4;
 					}
 				}
 
@@ -480,7 +480,160 @@ namespace System.Linq
 
 #endregion
 
+		[Test]
+		public static void Union()
+		{
+			let data = scope List<int>() { 0, 1, 2 };
+			let other = scope List<int>() { 3, 4, 5 };
+			let actual = data.Union(other).ToList(.. scope .());
 
+			Test.Assert(actual.SequenceEquals(int[6](0, 1, 2, 3, 4, 5)));
+		}
+
+		[Test]
+		public static void Intersect()
+		{
+			let data = scope List<int>() { 0, 1, 2 };
+			let other = scope List<int>() { 1, 5, 2 };
+			let actual = data.Intersect(other).ToList(.. scope .());
+
+			Test.Assert(actual.SequenceEquals(int[2](1, 2)));
+		}
+
+		[Test]
+		public static void Except()
+		{
+			let data = scope List<int>() { 0, 1, 2 };
+			let other = scope List<int>() { 0, 5, 2 };
+			let actual = data.Except(other).ToList(.. scope .());
+
+			Test.Assert(actual.SequenceEquals(int[1](1)));
+		}
+
+		[Test]
+		public static void Zip()
+		{
+			let data = scope List<int>() { 0, 1, 2, 3 };
+			let other = scope List<int>() { 1, 2, 3 };
+			let actual = data.Zip(other, (first, second) => first + second).ToList(.. scope .());
+
+			Test.Assert(actual.SequenceEquals(int[3](1, 3, 5)));
+		}
+
+		[Test]
+		public static void Concat()
+		{
+			let data = scope List<int>() { 0, 1, 2, 3 };
+			let other = scope List<int>() { 1, 2, 3 };
+			let actual = data.Concat(other).ToList(.. scope .());
+
+			Test.Assert(actual.SequenceEquals(int[?](0, 1, 2, 3, 1, 2, 3)));
+		}
+
+		[Test]
+		public static void Append()
+		{
+			let data = scope List<int>() { 0, 1, 2 };
+			let other = scope List<int>() { 1, 2, 3, 3 };
+			let actual = data.Append(other).ToList(.. scope .());
+
+			Test.Assert(actual.SequenceEquals(int[?](0, 1, 2, 1, 2, 3, 3)));
+		}
+
+		[Test]
+		public static void Prepend()
+		{
+			let data = scope List<int>() { 0, 1, 2 };
+			let other = scope List<int>() { 1, 2, 3, 3 };
+			let actual = data.Prepend(other).ToList(.. scope .());
+
+			Test.Assert(actual.SequenceEquals(int[?](1, 2, 3, 3, 0, 1, 2)));
+		}
+
+		[Test]
+		public static void OrderBy()
+		{
+			{
+				let data = scope List<(int x, int y)>() { (1, 2), (1, 3), (3, 2), (0, 4), (2, 0) };
+				let actual = data.OrderBy((it) => it.x).ToList(.. scope .());
+
+				let expected = scope List<(int x, int y)>() { (0, 4), (1, 2), (1, 3), (2, 0), (3, 2) };
+				Test.Assert(actual.SequenceEquals(expected));
+			}
+
+			{
+				let data = scope List<(int x, int y)>() { (1, 2), (1, 3), (3, 2), (0, 4), (2, 0) };
+				let actual = data.OrderBy((it) => it.x, (l, r) => l - r).ToList(.. scope .());
+
+				let expected = scope List<(int x, int y)>() { (0, 4), (1, 2), (1, 3), (2, 0), (3, 2) };
+				Test.Assert(actual.SequenceEquals(expected));
+			}
+			{
+				//orderby has some temp allocations, this test is just to make sure those temp allocations don't fail
+				let data = scope List<(int x, int y)>() { (1, 2), (1, 3), (3, 2), (0, 4), (2, 0) };
+				let actual = data.OrderBy((it) => it.x, (l, r) => l - r).OrderBy((it) => it.x, (l, r) => r - l).ToList(.. scope .());
+
+				let expected = scope List<(int x, int y)>() { (3, 2), (2, 0), (1, 2), (1, 3), (0, 4)};
+				Test.Assert(actual.SequenceEquals(expected));
+			}
+		}
+
+		[Test]
+		public static void OrderByDescending()
+		{
+			//this method shouldn't be using reverse, but I'm being lazy
+			{
+				let data = scope List<(int x, int y)>() { (1, 2), (1, 3), (3, 2), (0, 4), (2, 0) };
+				let actual = data.OrderByDescending((it) => it.x).ToList(.. scope .());
+
+				let expected = scope List<(int x, int y)>() { (0, 4), (1, 2), (1, 3), (2, 0), (3, 2) };
+				Test.Assert(actual.SequenceEquals(expected.Reverse()));
+			}
+
+			{
+				let data = scope List<(int x, int y)>() { (1, 2), (1, 3), (3, 2), (0, 4), (2, 0) };
+				let actual = data.OrderByDescending((it) => it.x, (l, r) => l - r).ToList(.. scope .());
+
+				let expected = scope List<(int x, int y)>() { (0, 4), (1, 2), (1, 3), (2, 0), (3, 2) };
+				Test.Assert(actual.SequenceEquals(expected.Reverse()));
+			}
+			{
+				//orderby has some temp allocations, this test is just to make sure those temp allocations don't fail
+				let data = scope List<(int x, int y)>() { (1, 2), (1, 3), (3, 2), (0, 4), (2, 0) };
+				let actual = data.OrderByDescending((it) => it.x, (l, r) => l - r).OrderBy((it) => it.x, (l, r) => r - l).ToList(.. scope .());
+
+				let expected = scope List<(int x, int y)>() { (3, 2), (2, 0),(1, 3),  (1, 2), (0, 4)};
+				Test.Assert(actual.SequenceEquals(expected));
+			}
+		}
+
+		[Test]
+		public static void ThenBy()
+		{
+			{
+				let data = scope List<(int x, int y)>() { (1, 2), (1, 3), (3, 2), (0, 4), (2, 0) };
+				let actual = data.OrderBy((it) => it.x).ThenBy((it) => it.y).ToList(.. scope .());
+
+				let expected = scope List<(int x, int y)>() { (0, 4), (1, 2), (1, 3), (2, 0), (3, 2) };
+				Test.Assert(actual.SequenceEquals(expected));
+			}
+
+			{
+				let data = scope List<(int x, int y)>() { (1, 2), (1, 3), (3, 2), (0, 4), (2, 0) };
+				let actual = data.OrderBy((it) => it.x, (l, r) => l - r).ToList(.. scope .());
+
+				let expected = scope List<(int x, int y)>() { (0, 4), (1, 2), (1, 3), (2, 0), (3, 2) };
+				Test.Assert(actual.SequenceEquals(expected));
+			}
+			{
+				//orderby has some temp allocations, this test is just to make sure those temp allocations don't fail
+				let data = scope List<(int x, int y)>() { (1, 2), (1, 3), (3, 2), (0, 4), (2, 0) };
+				let actual = data.OrderBy((it) => it.x, (l, r) => l - r).OrderBy((it) => it.x, (l, r) => r - l).ToList(.. scope .());
+
+				let expected = scope List<(int x, int y)>() { (3, 2), (2, 0), (1, 2), (1, 3), (0, 4)};
+				Test.Assert(actual.SequenceEquals(expected));
+			}
+		}
 
 #region Failures
 #if INCLUDE_FAILURES

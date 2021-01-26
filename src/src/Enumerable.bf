@@ -505,6 +505,8 @@ namespace System.Linq
 
 			[SkipCall]
 			public void Dispose() mut { }
+
+			public static implicit operator Iterator<TEnum, TSource>(TEnum enumerator) => .(enumerator);
 		}
 
 		extension Iterator<TEnum, TSource> : IDisposable where TEnum : IDisposable
@@ -1106,8 +1108,8 @@ namespace System.Linq
 		#endregion
 
 #region GroupBy
-		
-		struct DynamicArray<TValue> :  IDisposable
+
+		struct DynamicArray<TValue> : IDisposable
 		{
 			TValue[] mPtr = default;
 			Span<TValue> mSpan = default;
@@ -1135,7 +1137,7 @@ namespace System.Linq
 				if (mLength + 1 > mSize)
 				{
 					var newSize = mSize * 3 / 2;
-					var dst  = new TValue[newSize];
+					var dst = new TValue[newSize];
 					Array.Copy(mPtr, dst, mLength);
 					Swap!(mPtr, dst);
 					delete dst;
@@ -1151,11 +1153,11 @@ namespace System.Linq
 		}
 
 		public extension DynamicArray<TValue> : IDisposable
-			where TValue: IDisposable
+			where TValue : IDisposable
 		{
 			public void Dispose() mut
 			{
-				for(var it in mPtr)
+				for (var it in mPtr)
 					it.Dispose();
 
 				base.Dispose();
@@ -1256,7 +1258,7 @@ namespace System.Linq
 			where TEnum : concrete, IEnumerator<TSource>
 			where bool : operator TKey == TKey//where TKey : IHashable
 			where TKeyDlg : delegate TKey(TSource)
-			where TValueDlg: delegate TValue(TSource)
+			where TValueDlg : delegate TValue(TSource)
 		{
 			GroupByResult<TKey, TValue> mResults;
 			TKeyDlg mKeyDlg;
@@ -1326,43 +1328,51 @@ namespace System.Linq
 			return .(results, items.GetEnumerator(), key, scope (val) => val);
 		}
 
-		/*public static GroupByEnumerable<TSource, decltype(default(TCollection).GetEnumerator()), TKey, TKeyDlg, TSource, delegate TSource(TSource)>
-			GroupBy<TCollection, TSource, TKey, TKeyDlg>(this TCollection items, TKeyDlg key, GroupByResult<TKey, TSource> results)
-			where TCollection : concrete, IEnumerable<TSource>
-			where TKeyDlg : delegate TKey(TSource)
-			where TKey : IHashable
+		/*public static GroupByEnumerable<TSource, decltype(default(TCollection).GetEnumerator()), TKey, TKeyDlg,
+		TSource, delegate TSource(TSource)> GroupBy<TCollection, TSource, TKey, TKeyDlg>(this TCollection items, TKeyDlg
+		key, GroupByResult<TKey, TSource> results) where TCollection : concrete, IEnumerable<TSource> where TKeyDlg :
+		delegate TKey(TSource) where TKey : IHashable
 		{
 			//guess we could optimize out this scope with some code duplication
 			return .(results, items.GetEnumerator(), key, scope (val) => val);
 		}*/
 #endregion
-		struct UnionEnumerable<TSource, TEnum, TEnumCount> : IEnumerator<TSource>, IEnumerable<TSource>, IDisposable
+		struct UnionEnumerable<TSource, TEnum, TEnum2> : IEnumerator<TSource>, IEnumerable<TSource>, IDisposable
 			where TEnum : concrete, IEnumerator<TSource>
+			where TEnum2 : concrete, IEnumerator<TSource>
 			where TSource : IHashable
-			where TEnumCount: const int
-		
 		{
 			HashSet<TSource> mDistinctValues;
-			Iterator<TEnum, TSource>[TEnumCount] mIterator;
-			int mIndex = 0;
+			Iterator<TEnum, TSource> mSource;
+			Iterator<TEnum2, TSource> mOther;
+			int mState = 0;
 
-			public this(TEnum[TEnumCount] enumerators)
+			public this(TEnum sourceEnumerator, TEnum2 otherEnumerator)
 			{
-				for(var i < TEnumCount)
-					mIterator[i] = .(enumerators[i]);
+				mSource = sourceEnumerator;
+				mOther = otherEnumerator;
+
 				mDistinctValues = new .();
 			}
 
 			public Result<TSource> GetNext() mut
 			{
-				while(mIndex < TEnumCount)
-				{
-					var e = mIterator[mIndex].mEnum;
-					while(e.GetNext() case .Ok(let val))
-						if(mDistinctValues.Add(val))
+				switch (mState) {
+				case 0:
+					var e = mSource.mEnum;
+					while (e.GetNext() case .Ok(let val))
+						if (mDistinctValues.Add(val))
 							return .Ok(val);
 
-					mIndex++;
+					mState++;
+					fallthrough;
+				case 1:
+					var e = mOther.mEnum;
+					while (e.GetNext() case .Ok(let val))
+						if (mDistinctValues.Add(val))
+							return .Ok(val);
+
+					mState++;
 				}
 
 				return .Err;
@@ -1375,44 +1385,575 @@ namespace System.Linq
 
 			public void Dispose() mut
 			{
+				mSource.Dispose();
+				mOther.Dispose();
 				DeleteAndNullify!(mDistinctValues);
 			}
 		}
 
-		public static UnionEnumerable<TSource, decltype(default(TCollection).GetEnumerator()), const 2>
-			Union<TCollection, TSource>(this TCollection items, TCollection other)
+		public static UnionEnumerable<TSource, decltype(default(TCollection).GetEnumerator()), decltype(default(TCollection2).GetEnumerator())>
+			Union<TCollection, TCollection2, TSource>(this TCollection items, TCollection2 other)
 			where TCollection : concrete, IEnumerable<TSource>
+			where TCollection2 : concrete, IEnumerable<TSource>
 			where TSource : IHashable
 		{
-			return .( .(items.GetEnumerator(), other.GetEnumerator()));
+			return .(items.GetEnumerator(), other.GetEnumerator());
 		}
 
-		/*public static UnionEnumerable<TSource, decltype(default(TCollection).GetEnumerator()), const 3>
-			Union<TCollection, TSource>(this TCollection items, TCollection other1,TCollection other2)
-			where TCollection : concrete, IEnumerable<TSource>
+		struct ExceptEnumerable<TSource, TEnum, TEnum2> : IEnumerator<TSource>, IEnumerable<TSource>, IDisposable
+			where TEnum : concrete, IEnumerator<TSource>
+			where TEnum2 : concrete, IEnumerator<TSource>
 			where TSource : IHashable
 		{
-			return .(items.GetEnumerator(), other1.GetEnumerator(), other2.GetEnumerator());
+			HashSet<TSource> mDistinctValues;
+			Iterator<TEnum, TSource> mSource;
+			Iterator<TEnum2, TSource> mOther;
+			int mState = 0;
+
+			public this(TEnum sourceEnumerator, TEnum2 otherEnumerator)
+			{
+				mSource = sourceEnumerator;
+				mOther = otherEnumerator;
+
+				mDistinctValues = new .();
+			}
+
+			public Result<TSource> GetNext() mut
+			{
+				switch (mState) {
+				case 0:
+					var e = mOther.mEnum;
+					while (e.GetNext() case .Ok(let val))
+						mDistinctValues.Add(val);
+
+					mState++;
+					fallthrough;
+				case 1:
+					var e = mSource.mEnum;
+					while (e.GetNext() case .Ok(let val))
+						if (mDistinctValues.Add(val))
+							return .Ok(val);
+
+					mState++;
+				}
+
+				return .Err;
+			}
+
+			public Self GetEnumerator()
+			{
+				return this;
+			}
+
+			public void Dispose() mut
+			{
+				mSource.Dispose();
+				mOther.Dispose();
+				DeleteAndNullify!(mDistinctValues);
+			}
 		}
 
-		public static UnionEnumerable<TSource, decltype(default(TCollection).GetEnumerator()), const 4>
-			Union<TCollection, TSource>(this TCollection items, TCollection other1,TCollection other2, TCollection other3)
+		public static ExceptEnumerable<TSource, decltype(default(TCollection).GetEnumerator()), decltype(default(TCollection2).GetEnumerator())>
+			Except<TCollection, TCollection2, TSource>(this TCollection items, TCollection2 other)
 			where TCollection : concrete, IEnumerable<TSource>
+			where TCollection2 : concrete, IEnumerable<TSource>
 			where TSource : IHashable
 		{
-			return .(items.GetEnumerator(), other1.GetEnumerator(), other2.GetEnumerator(), other3.GetEnumerator());
+			return .(items.GetEnumerator(), other.GetEnumerator());
 		}
 
-		public static UnionEnumerable<TSource, decltype(default(TCollection).GetEnumerator()), const 5>
-			Union<TCollection, TSource>(this TCollection items, TCollection other1,TCollection other2, TCollection other3, TCollection other4)
-			where TCollection : concrete, IEnumerable<TSource>
+		struct IntersectEnumerable<TSource, TEnum, TEnum2> : IEnumerator<TSource>, IEnumerable<TSource>, IDisposable
+			where TEnum : concrete, IEnumerator<TSource>
+			where TEnum2 : concrete, IEnumerator<TSource>
 			where TSource : IHashable
 		{
-			return .(items.GetEnumerator(), other1.GetEnumerator(), other2.GetEnumerator(), other3.GetEnumerator(), other4.GetEnumerator());
+			HashSet<TSource> mDistinctValues;
+			Iterator<TEnum, TSource> mSource;
+			Iterator<TEnum2, TSource> mIntersect;
+			int mState = 0;
+
+			public this(TEnum sourceEnumerator, TEnum2 intersectEnumerator)
+			{
+				mSource = .(sourceEnumerator);
+				mIntersect = .(intersectEnumerator);
+				mDistinctValues = new .();
+			}
+
+			public Result<TSource> GetNext() mut
+			{
+				switch (mState)
+				{
+				case 0:
+					var e = mSource.mEnum;
+					while (e.GetNext() case .Ok(let val))
+						mDistinctValues.Add(val);
+
+					mState++;
+					fallthrough;
+				case 1:
+					var e = mIntersect.mEnum;
+					while (e.GetNext() case .Ok(let val))
+						if (mDistinctValues.Remove(val))
+							return .Ok(val);
+
+					mState++;
+				}
+
+				return .Err;
+			}
+
+			public Self GetEnumerator()
+			{
+				return this;
+			}
+
+			public void Dispose() mut
+			{
+				mSource.Dispose();
+				mIntersect.Dispose();
+				DeleteAndNullify!(mDistinctValues);
+			}
+		}
+
+		public static IntersectEnumerable<TSource, decltype(default(TCollection).GetEnumerator()), decltype(default(TCollection2).GetEnumerator())>
+			Intersect<TCollection, TCollection2, TSource>(this TCollection items, TCollection2 other)
+			where TCollection : concrete, IEnumerable<TSource>
+			where TCollection2 : concrete, IEnumerable<TSource>
+			where TSource : IHashable
+		{
+			return .(items.GetEnumerator(), other.GetEnumerator());
+		}
+
+		struct ZipEnumerable<TSource, TEnum, TEnum2, TResult, TSelect> : IEnumerator<TResult>, IEnumerable<TResult>, IDisposable
+			where TEnum : concrete, IEnumerator<TSource>
+			where TEnum2 : concrete, IEnumerator<TSource>
+			where TSelect : delegate TResult(TSource first, TSource second)
+		{
+			Iterator<TEnum, TSource> mSource;
+			Iterator<TEnum2, TSource> mOther;
+			TSelect mSelect;
+
+			public this(TEnum sourceEnumerator, TEnum2 otherEnumerator, TSelect select)
+			{
+				mSource = sourceEnumerator;
+				mOther = otherEnumerator;
+				mSelect = select;
+			}
+
+			public Result<TResult> GetNext() mut
+			{
+				if (mSource.mEnum.GetNext() case .Ok(let first))
+					if (mOther.mEnum.GetNext() case .Ok(let second))
+						return mSelect(first, second);
+
+				return .Err;
+			}
+
+			public Self GetEnumerator()
+			{
+				return this;
+			}
+
+			public void Dispose() mut
+			{
+				mSource.Dispose();
+				mOther.Dispose();
+			}
+		}
+
+		public static ZipEnumerable<TSource, decltype(default(TCollection).GetEnumerator()), decltype(default(TCollection2).GetEnumerator()), TResult, TSelect>
+			Zip<TCollection, TCollection2, TSource, TResult, TSelect>(this TCollection items, TCollection2 other, TSelect select)
+			where TCollection : concrete, IEnumerable<TSource>
+			where TCollection2 : concrete, IEnumerable<TSource>
+			where TSelect : delegate TResult(TSource first, TSource second)
+		{
+			return .(items.GetEnumerator(), other.GetEnumerator(), select);
+		}
+
+		struct ConcatEnumerable<TSource, TEnum, TEnum2> : IEnumerator<TSource>, IEnumerable<TSource>, IDisposable
+			where TEnum : concrete, IEnumerator<TSource>
+			where TEnum2 : concrete, IEnumerator<TSource>
+		{
+			Iterator<TEnum, TSource> mFirst;
+			Iterator<TEnum2, TSource> mSecond;
+			int mState = 0;
+
+			public this(TEnum firstEnumerator, TEnum2 secondEnumerator)
+			{
+				mFirst = firstEnumerator;
+				mSecond = secondEnumerator;
+			}
+
+			public Result<TSource> GetNext() mut
+			{
+				switch (mState) {
+				case 0:
+					if (mFirst.mEnum.GetNext() case .Ok(let val))
+						return .Ok(val);
+
+					mState++;
+					fallthrough;
+				case 1:
+					if (mSecond.mEnum.GetNext() case .Ok(let val))
+						return .Ok(val);
+
+					mState++;
+				}
+
+				return .Err;
+			}
+
+			public Self GetEnumerator()
+			{
+				return this;
+			}
+
+			public void Dispose() mut
+			{
+				mFirst.Dispose();
+				mSecond.Dispose();
+			}
+		}
+
+		public static ConcatEnumerable<TSource, decltype(default(TCollection).GetEnumerator()), decltype(default(TCollection2).GetEnumerator())>
+			Concat<TCollection, TCollection2, TSource>(this TCollection items, TCollection2 other)
+			where TCollection : concrete, IEnumerable<TSource>
+			where TCollection2 : concrete, IEnumerable<TSource>
+		{
+			return .(items.GetEnumerator(), other.GetEnumerator());
+		}
+
+		public static ConcatEnumerable<TSource, decltype(default(TCollection).GetEnumerator()), decltype(default(TCollection2).GetEnumerator())>
+			Append<TCollection, TCollection2, TSource>(this TCollection items, TCollection2 other)
+			where TCollection : concrete, IEnumerable<TSource>
+			where TCollection2 : concrete, IEnumerable<TSource>
+		{
+			return .(items.GetEnumerator(), other.GetEnumerator());
+		}
+
+		public static ConcatEnumerable<TSource, decltype(default(TCollection2).GetEnumerator()), decltype(default(TCollection).GetEnumerator())>
+			Prepend<TCollection, TCollection2, TSource>(this TCollection items, TCollection2 other)
+			where TCollection : concrete, IEnumerable<TSource>
+			where TCollection2 : concrete, IEnumerable<TSource>
+		{
+			return .(other.GetEnumerator(), items.GetEnumerator());
+		}
+
+		static class OrderByComparison<T>
+			where int : operator T <=> T
+		{
+			typealias TCompare = delegate int(T lhs, T rhs);
+			public readonly static TCompare Comparison = (new (lhs, rhs) => lhs <=> rhs) ~ delete _;
+		}
+
+		struct SortedEnumerable<TSource, TEnum, TKey, TKeyDlg, TCompare> : IEnumerator<(TKey key, TSource value)>, IEnumerable<(TKey key, TSource value)>, IDisposable
+			where TEnum : concrete, IEnumerator<TSource>
+			where TKeyDlg : delegate TKey(TSource)
+			where TCompare : delegate int(TKey lhs, TKey rhs)
+		{
+			List<(TKey key, TSource value)> mOrderedList;
+			Iterator<TEnum, TSource> mIterator;
+			TKeyDlg mKey;
+			TCompare mCompare;
+			int mIndex;
+			int mCount = 0;
+			bool mDescending;
+
+			public this(TEnum firstEnumerator, TKeyDlg key, TCompare compare, bool descending)
+			{
+				mOrderedList = new .();
+				mKey = key;
+				mIterator = firstEnumerator;
+				mCompare = compare;
+				mIndex = -1;
+				mDescending = descending;
+			}
+
+			public Result<(TKey key, TSource value)> GetNext() mut
+			{
+				if (mIndex == -1)
+				{
+					while (mIterator.mEnum.GetNext() case .Ok(let val))
+						mOrderedList.Add((mKey(val), val));
+
+					mOrderedList.Sort(scope (l, r) => mCompare(l.key, r.key));
+					mCount = mOrderedList.Count;//keeping vars local
+					mIndex = mDescending ? mCount : 0;
+				}
+
+				if (mDescending)
+				{
+					if (mIndex > 0)
+						return .Ok(mOrderedList[--mIndex]);
+				}
+				else if (mIndex < mCount)
+					return .Ok(mOrderedList[mIndex++]);
+
+				return .Err;
+			}
+
+			public Self GetEnumerator()
+			{
+				return this;
+			}
+
+			public void Dispose() mut
+			{
+				mIterator.Dispose();
+				DeleteAndNullify!(mOrderedList);
+			}
+		}
+		
+		struct SubSortEnumerable<TEnum2, TSource, TKey, TKey2, TKeyDlg2, TCompare2> : IEnumerator<(TKey2 key, TSource value)>, IEnumerable<(TKey2 key, TSource value)>, IDisposable
+			where TEnum2 : concrete, IEnumerator<(TKey key, TSource value)>//, IDisposable
+			where TKeyDlg2 : delegate TKey2(TSource)
+			where TCompare2 : delegate int(TKey2 lhs, TKey2 rhs)
+		{
+			typealias KVP = (TKey key, TSource value);
+			typealias KVP2 = (TKey2 key, TSource value);
+			List<KVP2> mOrderedList;
+			Iterator<TEnum2, KVP> mSorted;
+			TKeyDlg2 mKey;
+			TCompare2 mCompare;
+			int mIndex;
+			int mCount = 0;
+			int mFlags;
+			KVP mCurrent = default;
+			KVP mNext = default;
+
+			public this(TEnum2 sorted, TKeyDlg2 key, TCompare2 compare, bool descending)
+			{
+				mSorted = sorted;
+				mOrderedList = new .();
+				mKey = key;
+				mCompare = compare;
+				mFlags = descending ? 1 : 0;
+				mIndex = -1;
+			}
+
+			public Result<(TKey2 key, TSource value)> GetNext() mut
+			{
+				if (mIndex == -1)
+				{
+					if (mSorted.mEnum.GetNext() case .Ok(out mNext))
+					{
+						mIndex = 0;
+						mCount = 0;
+					}
+					else
+						return .Err;
+				}
+
+				if ((mIndex == 0 || mIndex == mCount) && (mFlags & 2) == 0)
+				{
+					mOrderedList.Clear();
+					while (mCurrent.key == mNext.key)
+					{
+						mOrderedList.Add((mKey(mNext.value), mNext.value));
+						if (!(mSorted.mEnum.GetNext() case .Ok(out mNext)))
+						{
+							mFlags |= 2;
+							break;
+						}
+					}
+
+					if (mOrderedList.Count > 1)
+						mOrderedList.Sort(scope (l, r) => mCompare(l.key, r.key));
+
+					mCount = mOrderedList.Count;
+					mIndex = ((mFlags & 1) == 1) ? mCount : 0;
+				}
+
+				if (mOrderedList.Count > 0)
+				{
+					if ((mFlags & 1) == 1)
+					{
+						if (mIndex > 0)
+							return .Ok(mOrderedList[--mIndex]);
+					}
+					else if (mIndex < mCount)
+						return .Ok(mOrderedList[mIndex++]);
+				}
+
+				return .Err;
+			}
+
+			public Self GetEnumerator()
+			{
+				return this;
+			}
+
+			public void Dispose() mut
+			{
+				mSorted.Dispose();
+				DeleteAndNullify!(mOrderedList);
+			}
+
+			/*internal ThenByEnumerable<decltype(default(Self).GetEnumerator()),TSource, TKey,  TKey2, TKeyDlg2, TCompare2>
+				Then<TEnum2, TKey2, TKeyDlg2, TCompare2>(TKeyDlg2 key, TCompare2 compare, bool descending)
+				where TEnum2: concrete, IEnumerator<(TKey key, TSource value)>
+				where TKeyDlg2: delegate TKey2(TSource)
+				where TCompare2 : delegate int(TKey2 lhs, TKey2 rhs)
+			{
+				return .(mSorted.GetEnumerator(), key, compare, descending);
+			}*/
+		}
+
+		struct OrderByEnumerable<TSource, TEnum, TKey, TKeyDlg, TCompare> : IEnumerator<TSource>, IEnumerable<TSource>, IDisposable
+			where TEnum : concrete, IEnumerator<TSource>
+			where TKeyDlg : delegate TKey(TSource)
+			where TCompare : delegate int(TKey lhs, TKey rhs)
+		{
+			typealias sortedEnumerable = SortedEnumerable<TSource, TEnum, TKey, TKeyDlg, TCompare>;
+			sortedEnumerable mSorted;
+
+			public this(TEnum enumerator, TKeyDlg key, TCompare compare, bool descending)
+			{
+				mSorted = .(enumerator, key, compare, descending);
+			}
+
+			public Result<TSource> GetNext() mut
+			{
+				if (mSorted.GetNext() case .Ok(let val))
+					return .Ok(val.value);
+
+				return .Err;
+			}
+
+			public Self GetEnumerator()
+			{
+				return this;
+			}
+
+			public void Dispose() mut
+			{
+				mSorted.Dispose();
+			}
+
+			public SubSortEnumerable<decltype(default(sortedEnumerable).GetEnumerator()),TSource, TKey,  TKey2, TKeyDlg2, TCompare2>
+				ThenBy<TEnum2, TKey2, TKeyDlg2, TCompare2>(TKeyDlg2 key, TCompare2 compare)
+				where TEnum2: concrete, IEnumerator<(TKey key, TSource value)>
+				where TKeyDlg2: delegate TKey2(TSource)
+				where TCompare2 : delegate int(TKey2 lhs, TKey2 rhs)
+			{
+				return .(mSorted.GetEnumerator(), key, compare, false);
+			}
+
+			public SubSortEnumerable<decltype(default(sortedEnumerable).GetEnumerator()),TSource, TKey,  TKey2, TKeyDlg2, TCompare2>
+				ThenBy<TEnum2, TKey2, TKeyDlg2>(TKeyDlg2 key)
+				where TEnum2: concrete, IEnumerator<(TKey key, TSource value)>
+				where TKeyDlg2: delegate TKey2(TSource)
+				where int : operator TKey2 <=> TKey2
+			{
+				return .(mSorted.GetEnumerator(), key, OrderByComparison<TKey2>.Comparison, false);
+			}
+		}
+
+		public static OrderByEnumerable<TSource, decltype(default(TCollection).GetEnumerator()), TKey, TKeyDlg, delegate int(TKey lhs, TKey rhs)>
+			OrderBy<TCollection, TSource, TKey, TKeyDlg>(this TCollection items, TKeyDlg keySelect)
+			where TCollection : concrete, IEnumerable<TSource>
+			where TKeyDlg : delegate TKey(TSource)
+			where int : operator TKey <=> TKey
+		{
+			return .(items.GetEnumerator(), keySelect, OrderByComparison<TKey>.Comparison, false);
+		}
+
+		public static OrderByEnumerable<TSource, decltype(default(TCollection).GetEnumerator()), TKey, TKeyDlg, TCompare>
+			OrderBy<TCollection, TSource, TKey, TKeyDlg, TCompare>(this TCollection items, TKeyDlg keySelect, TCompare comparison)
+			where TCollection : concrete, IEnumerable<TSource>
+			where TKeyDlg : delegate TKey(TSource)
+			where TCompare : delegate int(TKey lhs, TKey rhs)
+		{
+			return .(items.GetEnumerator(), keySelect, comparison, false);
+		}
+
+		public static OrderByEnumerable<TSource, decltype(default(TCollection).GetEnumerator()), TKey, TKeyDlg, delegate int(TKey lhs, TKey rhs)>
+			OrderByDescending<TCollection, TSource, TKey, TKeyDlg>(this TCollection items, TKeyDlg keySelect)
+			where TCollection : concrete, IEnumerable<TSource>
+			where TKeyDlg : delegate TKey(TSource)
+			where int : operator TKey <=> TKey
+		{
+			return .(items.GetEnumerator(), keySelect, OrderByComparison<TKey>.Comparison, true);
+		}
+
+		public static OrderByEnumerable<TSource, decltype(default(TCollection).GetEnumerator()), TKey, TKeyDlg, TCompare>
+			OrderByDescending<TCollection, TSource, TKey, TKeyDlg, TCompare>(this TCollection items, TKeyDlg keySelect, TCompare comparison)
+			where TCollection : concrete, IEnumerable<TSource>
+			where TKeyDlg : delegate TKey(TSource)
+			where TCompare : delegate int(TKey lhs, TKey rhs)
+		{
+			return .(items.GetEnumerator(), keySelect, comparison, true);
+		}
+
+		struct ThenByEnumerable<TSource, TEnum, TKey, TSubKey, TKeyDlg, TCompare> : IEnumerator<TSource>, IEnumerable<TSource>, IDisposable
+			where TEnum : concrete, IEnumerator<(TKey key, TSource value)>//, IDisposable
+			where TKeyDlg : delegate TSubKey(TSource)
+			where TCompare : delegate int(TSubKey lhs, TSubKey rhs)
+		{
+			typealias sortedEnumerable = SubSortEnumerable< TEnum, TSource, TKey, TSubKey, TKeyDlg, TCompare>;
+			sortedEnumerable mSorted;
+
+			public this(TEnum enumerator, TKeyDlg key, TCompare compare, bool descending)
+			{
+				mSorted = .(enumerator, key, compare, descending);
+			}
+
+			public Result<TSource> GetNext() mut
+			{
+				if (mSorted.GetNext() case .Ok(let val))
+					return .Ok(val.value);
+
+				return .Err;
+			}
+
+			public Self GetEnumerator()
+			{
+				return this;
+			}
+
+			public void Dispose() mut
+			{
+				mSorted.Dispose();
+			}
+
+			/*internal SubSortEnumerable<TSource, decltype(default(Self).GetEnumerator()), TKey2,  TKey3, TKeyDlg2, TCompare2>
+				Then<TEnum2, TKey3, TKeyDlg2, TCompare2>(TKeyDlg2 key, TCompare2 compare, bool descending)
+				where TEnum2: concrete, IEnumerator<(TKey2 key, TSource value)>
+				where TKeyDlg2: delegate TKey3(TSource)
+				where TCompare2 : delegate int(TKey3 lhs, TKey3 rhs)
+			{
+				return .(mSorted.GetEnumerator(), key, compare, descending);
+			}*/
+
+			internal SubSortEnumerable<decltype(default(sortedEnumerable).GetEnumerator()),TSource, TSubKey,  TKey2, TKeyDlg2, TCompare2>
+				ThenBy<TEnum2, TKey2, TKeyDlg2, TCompare2>(TKeyDlg2 key, TCompare2 compare, bool descending)
+				where TEnum2: concrete, IEnumerator<(TKey key, TSource value)>
+				where TKeyDlg2: delegate TKey2(TSource)
+				where TCompare2 : delegate int(TKey2 lhs, TKey2 rhs)
+			{
+				return .(mSorted.GetEnumerator(), key, compare, descending);
+			}
+			
+			internal SubSortEnumerable<decltype(default(sortedEnumerable).GetEnumerator()),TSource, TSubKey,  TKey2, TKeyDlg2, delegate int(TKey lhs, TKey rhs)>
+				ThenBy<TEnum2, TKey2, TKeyDlg2>(TKeyDlg2 key)
+				where TEnum2: concrete, IEnumerator<(TKey key, TSource value)>
+				where TKeyDlg2: delegate TKey2(TSource)
+				where int : operator TKey2 <=> TKey2
+			{
+				return .(mSorted.GetEnumerator(), key, OrderByComparison<TKey2>.Comparison, false);
+			}
+		}
+
+		/*public static ThenByEnumerable<TSource, TEnum, TOrdered TKey, TKeyDlg, TCompare>
+			ThenBy<TSource, TEnum, TKey, TKeyDlg, TCompare>(this OrderByEnumerable<TSource, TEnum, TKey, TKeyDlg, TCompare> items, TKeyDlg keySelect, TCompare comparison)
+			where TEnum : concrete, IEnumerator<TSource>
+			where TKeyDlg : delegate TKey(TSource)
+			where TCompare : delegate int(TKey lhs, TKey rhs)
+		{
+			return .(items.GetEnumerator(), keySelect, comparison, false);
 		}*/
 
-
-		struct OfTypeEnumerable<TSource, TEnum, TOf> : Iterator<TEnum, TSource>, IEnumerator<TOf>, IEnumerable<TOf>
+		/*struct OfTypeEnumerable<TSource, TEnum, TOf> : Iterator<TEnum, TSource>, IEnumerator<TOf>, IEnumerable<TOf>
 			where TEnum : concrete, IEnumerator<TSource>
 			where TSource : class
 		{
@@ -1442,6 +1983,8 @@ namespace System.Linq
 			where TSource : class
 		{
 			return .(items.GetEnumerator());
-		}
+		}*/
+
+
 	}
 }
