@@ -486,8 +486,8 @@ namespace System.Linq
 
 		#region Find in enumerable
 
-		internal static bool InternalElementAt<TCollection, TSource>(TCollection items, int index, out TSource val)
-			where TCollection : concrete, IEnumerable<TSource>
+		internal static bool InternalElementAt<TEnum, TSource>(TEnum items, int index, out TSource val)
+			where TEnum : concrete, IEnumerator<TSource>
 		{
 			var index;
 			using (var iterator = Iterator.Wrap(items))
@@ -509,7 +509,16 @@ namespace System.Linq
 		public static TSource ElementAt<TCollection, TSource>(this TCollection items, int index)
 			where TCollection : concrete, IEnumerable<TSource>
 		{
-			if (InternalElementAt<TCollection, TSource>(items, index, let val))
+			if (InternalElementAt<decltype(default(TCollection).GetEnumerator()), TSource>(items.GetEnumerator(), index, let val))
+				return val;
+
+			Runtime.FatalError("Not enough elements in the sequence.");
+		}
+
+		public static TSource ElementAt<TEnum, TSource>(this TEnum items, int index)
+			where TEnum : concrete, IEnumerator<TSource>
+		{
+			if (InternalElementAt<TEnum, TSource>(items, index, let val))
 				return val;
 
 			Runtime.FatalError("Not enough elements in the sequence.");
@@ -518,17 +527,25 @@ namespace System.Linq
 		public static TSource ElementAtOrDefault<TCollection, TSource>(this TCollection items, int index)
 			where TCollection : concrete, IEnumerable<TSource>
 		{
-			if (InternalElementAt<TCollection, TSource>(items, index, let val))
+			if (InternalElementAt<decltype(default(TCollection).GetEnumerator()), TSource>(items.GetEnumerator(), index, let val))
 				return val;
 
 			return default;
 		}
 
-
-		public static bool InternalFirst<TCollection, TSource>(TCollection items, out TSource val)
-			where TCollection : concrete, IEnumerable<TSource>
+		public static TSource ElementAtOrDefault<TEnum, TSource>(this TEnum items, int index)
+			where TEnum : concrete, IEnumerator<TSource>
 		{
-			using (var iterator = Iterator.Wrap<TCollection, TSource>(items))
+			if (InternalElementAt<TEnum, TSource>(items, index, let val))
+				return val;
+
+			return default;
+		}
+
+		public static bool InternalFirst<TEnum, TSource>(TEnum items, out TSource val)
+			where TEnum : concrete, IEnumerator<TSource>
+		{
+			using (var iterator = Iterator.Wrap(items))
 			{
 				var enumerator = iterator.mEnum;
 				if (enumerator.GetNext() case .Ok(out val))
@@ -541,7 +558,15 @@ namespace System.Linq
 		public static TSource First<TCollection, TSource>(this TCollection items)
 			where TCollection : concrete, IEnumerable<TSource>
 		{
-			if (InternalFirst<TCollection, TSource>(items, let val))
+			if (InternalFirst<decltype(default(TCollection).GetEnumerator()), TSource>(items.GetEnumerator(), let val))
+				return val;
+			Runtime.FatalError("Sequence contained no elements.");
+		}
+
+		public static TSource First<TEnum, TSource>(this TEnum items)
+			where TEnum : concrete, IEnumerator<TSource>
+		{
+			if (InternalFirst<TEnum, TSource>(items, let val))
 				return val;
 			Runtime.FatalError("Sequence contained no elements.");
 		}
@@ -549,14 +574,23 @@ namespace System.Linq
 		public static TSource FirstOrDefault<TCollection, TSource>(this TCollection items)
 			where TCollection : concrete, IEnumerable<TSource>
 		{
-			if (InternalFirst<TCollection, TSource>(items, let val))
+			if (InternalFirst<decltype(default(TCollection).GetEnumerator()), TSource>(items.GetEnumerator(), let val))
 				return val;
 
 			return default;
 		}
 
-		internal static bool InternalLast<TCollection, TSource>(TCollection items, out TSource val)
-			where TCollection : concrete, IEnumerable<TSource>
+		public static TSource FirstOrDefault<TEnum, TSource>(this TEnum items)
+			where TEnum : concrete, IEnumerator<TSource>
+		{
+			if (InternalFirst<TEnum, TSource>(items, let val))
+				return val;
+
+			return default;
+		}
+
+		internal static bool InternalLast<TEnum, TSource>(TEnum items, out TSource val)
+			where TEnum : concrete, IEnumerator<TSource>
 		{
 			var found = false;
 			using (var iterator = Iterator.Wrap(items))
@@ -575,7 +609,16 @@ namespace System.Linq
 		public static TSource Last<TCollection, TSource>(this TCollection items)
 			where TCollection : concrete, IEnumerable<TSource>
 		{
-			if (InternalLast<TCollection, TSource>(items, let val))
+			if (InternalLast<decltype(default(TCollection).GetEnumerator()), TSource>(items.GetEnumerator(), let val))
+				return val;
+
+			Runtime.FatalError("Sequence contained no elements.");
+		}
+
+		public static TSource Last<TEnum, TSource>(this TEnum items)
+			where TEnum : concrete, IEnumerator<TSource>
+		{
+			if (InternalLast<TEnum, TSource>(items, let val))
 				return val;
 
 			Runtime.FatalError("Sequence contained no elements.");
@@ -584,16 +627,25 @@ namespace System.Linq
 		public static TSource LastOrDefault<TCollection, TSource>(this TCollection items)
 			where TCollection : concrete, IEnumerable<TSource>
 		{
-			if (InternalLast<TCollection, TSource>(items, let val))
+			if (InternalLast<decltype(default(TCollection).GetEnumerator()), TSource>(items.GetEnumerator(), let val))
+				return val;
+
+			return default;
+		}
+		
+		public static TSource LastOrDefault<TEnum, TSource>(this TEnum items)
+			where TEnum : concrete, IEnumerator<TSource>
+		{
+			if (InternalLast<TEnum, TSource>(items, let val))
 				return val;
 
 			return default;
 		}
 
-		internal static bool InternalSingle<TCollection, TSource>(TCollection items, out TSource val)
-			where TCollection : concrete, IEnumerable<TSource>
+		internal static bool InternalSingle<TEnum, TSource>(TEnum items, out TSource val)
+			where TEnum : concrete, IEnumerator<TSource>
 		{
-			using (var iterator = Iterator.Wrap<TCollection, TSource>(items))
+			using (var iterator = Iterator.Wrap(items))
 			{
 				var enumerator = iterator.mEnum;
 
@@ -612,7 +664,16 @@ namespace System.Linq
 		public static TSource Single<TCollection, TSource>(this TCollection items)
 			where TCollection : concrete, IEnumerable<TSource>
 		{
-			if (InternalSingle<TCollection, TSource>(items, let val))
+			if (InternalSingle<decltype(default(TCollection).GetEnumerator()), TSource>(items.GetEnumerator(), let val))
+				return val;
+
+			Runtime.FatalError("Sequence contained no elements.");
+		}
+
+		public static TSource Single<TEnum, TSource>(this TEnum items)
+			where TEnum : concrete, IEnumerator<TSource>
+		{
+			if (InternalSingle<TEnum, TSource>(items, let val))
 				return val;
 
 			Runtime.FatalError("Sequence contained no elements.");
@@ -621,7 +682,16 @@ namespace System.Linq
 		public static TSource SingleOrDefault<TCollection, TSource>(this TCollection items)
 			where TCollection : concrete, IEnumerable<TSource>
 		{
-			if (InternalSingle<TCollection, TSource>(items, let val))
+			if (InternalSingle<decltype(default(TCollection).GetEnumerator()), TSource>(items.GetEnumerator(), let val))
+				return val;
+
+			return default;
+		}
+
+		public static TSource SingleOrDefault<TEnum, TSource>(this TEnum items)
+			where TEnum : concrete, IEnumerator<TSource>
+		{
+			if (InternalSingle<TEnum, TSource>(items, let val))
 				return val;
 
 			return default;
