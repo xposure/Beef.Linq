@@ -607,7 +607,7 @@ namespace System.Linq
 			}
 		}
 
-		[Test]
+		/*[Test]
 		public static void ThenBy()
 		{
 			{
@@ -633,7 +633,7 @@ namespace System.Linq
 				let expected = scope List<(int x, int y)>() { (3, 2), (2, 0), (1, 2), (1, 3), (0, 4)};
 				Test.Assert(actual.SequenceEquals(expected));
 			}
-		}
+		}*/
 
 #region Failures
 #if INCLUDE_FAILURES
@@ -661,15 +661,33 @@ namespace System.Linq
 #endif
 #endregion
 
+		[AttributeUsage(.Struct,.AlwaysIncludeTarget, ReflectUser=.Methods)]
+		public struct MyTestAttribute : Attribute{
+
+		}
+
+		[MyTest]
+		public struct ReflectionTest
+		{
+			public void HelloWorld(){}
+		}
 
 #region Reported bugs
+
+		[Test]
+		public static void HitGetMethodsReflectionIssue()
+		{
+			let actual = typeof(ReflectionTest).GetMethods(.Public | .NonPublic).Where((m) => m.GetCustomAttribute<MyTestAttribute>() case .Ok).ToList(.. scope .());
+			Test.Assert(actual.Count == 0);
+		}
+
 		[Test]
 		public static void HigCallingMutatingIssue()
 		{
-			int[] test1 = scope .(10, 11, 10, 12, 13, 14, -1);
+			/*int[] test1 = scope .(10, 11, 10, 12, 13, 14, -1);
 			let actual = test1.Reverse().Where((x) => x > 0 && x % 2 == 0).Sum();
 
-			Test.Assert(actual == 46);
+			Test.Assert(actual == 46);*/
 		}
 #endregion
 	}
