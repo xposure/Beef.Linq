@@ -172,21 +172,93 @@ namespace System.Linq
 			return false;
 		}
 
-		public static bool Contains<TCollection, TSource>(this TCollection items, TSource source)
-			where TCollection : concrete, IEnumerable<TSource>
-			where bool : operator TSource == TSource
+		public static bool Any<TEnum, TSource>(this TEnum items)
+			where TEnum : concrete, IEnumerator<TSource>
 		{
-			var enumerator = items.GetEnumerator();
-			while (enumerator.GetNext() case .Ok(let val))
-				if (val == source)
+			for (var it in items)
+				return true;
+
+			return false;
+		}
+
+		public static bool Any<TEnum, TSource, TPredicate>(this TEnum items, TPredicate predicate)
+			where TEnum : concrete, IEnumerator<TSource>
+			where TPredicate : delegate bool(TSource)
+		{
+			for (var it in items)
+				if (predicate(it))
 					return true;
 
 			return false;
 		}
 
+		public static bool Contains<TCollection, TSource>(this TCollection items, TSource source)
+			where TCollection : concrete, IEnumerable<TSource>
+			where bool : operator TSource == TSource
+		{
+			for(var it in items)
+				if(it == source)
+					return true;
+
+			return false;
+		}
+
+		public static bool Contains<TEnum, TSource>(this TEnum items, TSource source)
+			where TEnum : concrete, IEnumerator<TSource>
+			where bool : operator TSource == TSource
+		{
+			for(var it in items)
+				if(it == source)
+					return true;
+
+			return false;
+		}
+
+		
 		public static bool SequenceEquals<TLeft, TRight, TSource>(this TLeft left, TRight right)
 			where TLeft : concrete, IEnumerable<TSource>
 			where TRight : concrete, IEnumerable<TSource>
+			where bool : operator TSource == TSource
+		{
+			return InternalSequenceEquals<
+				decltype(default(TLeft).GetEnumerator()),
+				decltype(default(TRight).GetEnumerator()),
+				TSource>(left.GetEnumerator(), right.GetEnumerator());
+		}
+
+		public static bool SequenceEquals<TLeft, TRight, TSource>(this TLeft left, TRight right)
+			where TLeft : concrete, IEnumerable<TSource>
+			where TRight : concrete, IEnumerator<TSource>
+			where bool : operator TSource == TSource
+		{
+			return InternalSequenceEquals<
+				decltype(default(TLeft).GetEnumerator()),
+				TRight,
+				TSource>(left.GetEnumerator(), right);
+		}
+
+		public static bool SequenceEquals<TLeft, TRight, TSource>(this TLeft left, TRight right)
+			where TLeft : concrete, IEnumerator<TSource>
+			where TRight : concrete, IEnumerable<TSource>
+			where bool : operator TSource == TSource
+		{
+			return InternalSequenceEquals<
+				TLeft,
+				decltype(default(TRight).GetEnumerator()),
+				TSource>(left, right.GetEnumerator());
+		}
+
+		public static bool SequenceEquals<TLeft, TRight, TSource>(this TLeft left, TRight right)
+			where TLeft : concrete, IEnumerator<TSource>
+			where TRight : concrete, IEnumerator<TSource>
+			where bool : operator TSource == TSource
+		{
+			return InternalSequenceEquals<TLeft,TRight,TSource>(left, right);
+		}
+
+		static bool InternalSequenceEquals<TLeft, TRight, TSource>(TLeft left, TRight right)
+			where TLeft : concrete, IEnumerator<TSource>
+			where TRight : concrete, IEnumerator<TSource>
 			where bool : operator TSource == TSource
 		{
 			using (var iterator0 = Iterator.Wrap<TLeft, TSource>(left))
@@ -220,9 +292,24 @@ namespace System.Linq
 
 		#region Aggregates
 
-
 		public static TSource Average<TCollection, TSource>(this TCollection items)
 			where TCollection : concrete, IEnumerable<TSource>
+			where TSource : operator TSource / int
+			where TSource : operator TSource + TSource
+		{
+			return InternalAverage<decltype(default(TCollection).GetEnumerator()), TSource>(items.GetEnumerator());
+		}
+
+		public static TSource Average<TEnum, TSource>(this TEnum items)
+			where TEnum : concrete, IEnumerator<TSource>
+			where TSource : operator TSource / int
+			where TSource : operator TSource + TSource
+		{
+			return InternalAverage<TEnum, TSource>(items);
+		}
+
+		static TSource InternalAverage<TEnum, TSource>(TEnum items)
+			where TEnum : concrete, IEnumerator<TSource>
 			where TSource : operator TSource / int
 			where TSource : operator TSource + TSource
 		{
@@ -250,38 +337,22 @@ namespace System.Linq
 			}
 		}
 
-		/*public static TSource Average<TCollection, TSource, TPredicate>(this TCollection items, TPredicate predicate)
-			where TCollection : concrete, IEnumerable<TSource>
-			where TSource : operator TSource / int
-			where TSource : operator TSource + TSource
-			where TPredicate : delegate bool(TSource)
-		{
-			var count = 0;
-			TSource sum = ?;
-			using (var iterator = Iterator.Wrap(items.Where(predicate)))
-			{
-				var enumerator = iterator.mEnum;
-
-				switch (enumerator.GetNext())
-				{
-				case .Ok(let val):
-					sum = val;
-					count++;
-				case .Err: return default;
-				}
-
-				while (enumerator.GetNext() case .Ok(let val))
-				{
-					sum += val;
-					count++;
-				}
-
-				return sum / count;
-			}
-		}*/
-
 		public static TSource Max<TCollection, TSource>(this TCollection items)
 			where TCollection : concrete, IEnumerable<TSource>
+			where bool : operator TSource < TSource
+		{
+			return InternalMax<decltype(default(TCollection).GetEnumerator()), TSource>(items.GetEnumerator());
+		}
+
+		public static TSource Max<TEnum, TSource>(this TEnum items)
+			where TEnum : concrete, IEnumerator<TSource>
+			where bool : operator TSource < TSource
+		{
+			return InternalMax<TEnum, TSource>(items);
+		}
+
+		static TSource InternalMax<TEnum, TSource>(TEnum items)
+			where TEnum : concrete, IEnumerator<TSource>
 			where bool : operator TSource < TSource
 		{
 			TSource max = ?;
@@ -304,13 +375,26 @@ namespace System.Linq
 			return max;
 		}
 
-
 		public static TSource Min<TCollection, TSource>(this TCollection items)
 			where TCollection : concrete, IEnumerable<TSource>
 			where bool : operator TSource < TSource
 		{
+			return InternalMin<decltype(default(TCollection).GetEnumerator()), TSource>(items.GetEnumerator());
+		}
+
+		public static TSource Min<TEnum, TSource>(this TEnum items)
+			where TEnum : concrete, IEnumerator<TSource>
+			where bool : operator TSource < TSource
+		{
+			return InternalMin<TEnum, TSource>(items);
+		}
+
+		static TSource InternalMin<TEnum, TSource>(TEnum items)
+			where TEnum : concrete, IEnumerator<TSource>
+			where bool : operator TSource < TSource
+		{
 			TSource min = ?;
-			using (var iterator = Iterator.Wrap<TCollection, TSource>(items))
+			using (var iterator = Iterator.Wrap(items))
 			{
 				var enumerator = iterator.mEnum;
 				switch (enumerator.GetNext())
@@ -331,6 +415,22 @@ namespace System.Linq
 
 		public static TSource Sum<TCollection, TSource, TPredicate>(this TCollection items)
 			where TCollection : concrete, IEnumerable<TSource>
+			where TPredicate : delegate bool(TSource)
+			where TSource : operator TSource + TSource
+		{
+			return InternalSum<decltype(default(TCollection).GetEnumerator()), TSource, TPredicate>(items.GetEnumerator());
+		}
+
+		public static TSource Sum<TEnum, TSource, TPredicate>(this TEnum items)
+			where TEnum : concrete, IEnumerator<TSource>
+			where TPredicate : delegate bool(TSource)
+			where TSource : operator TSource + TSource
+		{
+			return InternalSum<TEnum, TSource, TPredicate>(items);
+		}
+
+		static TSource InternalSum<TEnum, TSource, TPredicate>( TEnum items)
+			where TEnum : concrete, IEnumerator<TSource>
 			where TPredicate : delegate bool(TSource)
 			where TSource : operator TSource + TSource
 		{
@@ -358,8 +458,22 @@ namespace System.Linq
 			if (typeof(TCollection) == typeof(TSource[]))
 				return (items as TSource[]).Count;
 
+			return InternalCount<decltype(default(TCollection).GetEnumerator()), TSource>(items.GetEnumerator());
+		}
+
+		
+		public static int Count<TEnum, TSource>(this TEnum items)
+			where TEnum : concrete, IEnumerator<TSource>
+		{
+			return InternalCount<TEnum, TSource>(items);
+		}
+
+		public static int InternalCount<TEnum, TSource>(TEnum items)
+			where TEnum : concrete, IEnumerator<TSource>
+		{
+
 			var count = 0;
-			using (var iterator = Iterator.Wrap<TCollection, TSource>(items))
+			using (var iterator = Iterator.Wrap(items))
 			{
 				var enumerator = iterator.mEnum;
 				while (enumerator.GetNext() case .Ok)
