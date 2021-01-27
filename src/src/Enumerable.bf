@@ -1345,11 +1345,36 @@ namespace System.Linq
 		{
 			return .(items.GetEnumerator(), min, max);
 		}
+
+		public static MapEnumerable<TSource, TEnum, TResult>
+			Map<TEnum, TSource, TResult>(this TEnum items, TResult min, TResult max)
+			where TEnum : concrete, IEnumerator<TSource>
+			where bool : operator TSource < TSource
+			where TSource : operator TSource - TSource
+			where TResult : operator TResult + TResult
+			where TResult : operator TResult - TResult
+			where float : operator float / TSource
+			where float : operator TSource * float
+			where float : operator float / TResult
+			where TResult : operator explicit float
+		{
+			return .(items, min, max);
+		}
 #endregion
 
 #region ToXYZ methods
 		public static void ToDictionary<TCollection, TSource, TKeyDlg, TKey, TValueDlg, TValue>(this TCollection items, TKeyDlg keyDlg, TValueDlg valueDlg, Dictionary<TKey, TValue> output)
 			where TCollection : concrete, IEnumerable<TSource>
+			where TKey : IHashable
+			where TKeyDlg : delegate TKey(TSource)
+			where TValueDlg : delegate TValue(TSource)
+		{
+			for (var it in items)
+				output.Add(keyDlg(it), valueDlg(it));
+		}
+
+		public static void ToDictionary<TEnum, TSource, TKeyDlg, TKey, TValueDlg, TValue>(this TEnum items, TKeyDlg keyDlg, TValueDlg valueDlg, Dictionary<TKey, TValue> output)
+			where TEnum : concrete, IEnumerator<TSource>
 			where TKey : IHashable
 			where TKeyDlg : delegate TKey(TSource)
 			where TValueDlg : delegate TValue(TSource)
@@ -1367,6 +1392,15 @@ namespace System.Linq
 				output.Add(keyDlg(it), it);
 		}
 
+		public static void ToDictionary<TEnum, TSource, TKeyDlg, TKey>(this TEnum items, TKeyDlg keyDlg, Dictionary<TKey, TSource> output)
+			where TEnum : concrete, IEnumerator<TSource>
+			where TKey : IHashable
+			where TKeyDlg : delegate TKey(TSource)
+		{
+			for (var it in items)
+				output.Add(keyDlg(it), it);
+		}
+
 		public static void ToHashSet<TCollection, TSource>(this TCollection items, HashSet<TSource> output)
 			where TCollection : concrete, IEnumerable<TSource>
 			where TSource : IHashable
@@ -1375,8 +1409,23 @@ namespace System.Linq
 				output.Add(it);
 		}
 
-		public static void ToList<T, TSource>(this T items, List<TSource> output)
-			where T : concrete, IEnumerable<TSource>
+		public static void ToHashSet<TEnum, TSource>(this TEnum items, HashSet<TSource> output)
+			where TEnum : concrete, IEnumerator<TSource>
+			where TSource : IHashable
+		{
+			for (var it in items)
+				output.Add(it);
+		}
+
+		public static void ToList<TCollection, TSource>(this TCollection items, List<TSource> output)
+			where TCollection : concrete, IEnumerable<TSource>
+		{
+			for (var it in items)
+				output.Add(it);
+		}
+
+		public static void ToList<TEnum, TSource>(this TEnum items, List<TSource> output)
+			where TEnum : concrete, IEnumerator<TSource>
 		{
 			for (var it in items)
 				output.Add(it);
@@ -1389,7 +1438,18 @@ namespace System.Linq
 			where TCollection : concrete, IEnumerable<TSource>
 			where TAccumulate : delegate TSource(TSource, TSource)
 		{
-			if (InternalAggregate(items, default(TSource), accumulate, let result))
+			if (InternalAggregate<decltype(default(TCollection).GetEnumerator()), TSource, TSource, TAccumulate>(items.GetEnumerator(), default(TSource), accumulate, let result))
+				return result;
+
+			Runtime.FatalError("No elements in the sequence.");
+		}
+
+		public static TSource
+			Aggregate<TEnum, TSource, TAccumulate>(this TEnum items, TAccumulate accumulate)
+			where TEnum : concrete, IEnumerator<TSource>
+			where TAccumulate : delegate TSource(TSource, TSource)
+		{
+			if (InternalAggregate<TEnum, TSource, TSource, TAccumulate>(items, default(TSource), accumulate, let result))
 				return result;
 
 			Runtime.FatalError("No elements in the sequence.");
@@ -1400,7 +1460,18 @@ namespace System.Linq
 			where TCollection : concrete, IEnumerable<TSource>
 			where TAccDlg : delegate TAccumulate(TAccumulate, TSource)
 		{
-			if (InternalAggregate(items, seed, accumulate, let result))
+			if (InternalAggregate<decltype(default(TCollection).GetEnumerator()), TSource, TAccumulate, TAccDlg>(items.GetEnumerator(), seed, accumulate, let result))
+				return result;
+
+			return seed;
+		}
+
+		public static TAccumulate
+			Aggregate<TEnum, TSource, TAccumulate, TAccDlg>(this TEnum items, TAccumulate seed, TAccDlg accumulate)
+			where TEnum : concrete, IEnumerator<TSource>
+			where TAccDlg : delegate TAccumulate(TAccumulate, TSource)
+		{
+			if (InternalAggregate<TEnum, TSource, TAccumulate, TAccDlg>(items, seed, accumulate, let result))
 				return result;
 
 			return seed;
@@ -1412,7 +1483,19 @@ namespace System.Linq
 			where TAccDlg : delegate TAccumulate(TAccumulate, TSource)
 			where TResDlg : delegate TResult(TAccumulate)
 		{
-			if (InternalAggregate(items, default(TAccumulate), accumulate, let result))
+			if (InternalAggregate<decltype(default(TCollection).GetEnumerator()), TSource, TAccumulate, TAccDlg>(items.GetEnumerator(), default(TAccumulate), accumulate, let result))
+				return resultSelector(result);
+
+			return resultSelector(default);
+		}
+
+		public static TResult
+			Aggregate<TEnum, TSource, TAccumulate, TAccDlg, TResult, TResDlg>(this TEnum items, TAccDlg accumulate, TResDlg resultSelector)
+			where TEnum : concrete, IEnumerator<TSource>
+			where TAccDlg : delegate TAccumulate(TAccumulate, TSource)
+			where TResDlg : delegate TResult(TAccumulate)
+		{
+			if (InternalAggregate<TEnum, TSource, TAccumulate, TAccDlg>(items, default(TAccumulate), accumulate, let result))
 				return resultSelector(result);
 
 			return resultSelector(default);
@@ -1424,15 +1507,26 @@ namespace System.Linq
 			where TAccDlg : delegate TAccumulate(TAccumulate, TSource)
 			where TResDlg : delegate TResult(TAccumulate)
 		{
-			if (InternalAggregate(items, seed, accumulate, let result))
+			if (InternalAggregate<decltype(default(TCollection).GetEnumerator()), TSource, TAccumulate, TAccDlg>(items.GetEnumerator(), seed, accumulate, let result))
 				return resultSelector(result);
 
 			return resultSelector(seed);
 		}
 
-		internal static bool
-			InternalAggregate<TCollection, TSource, TAccumulate, TAccDlg>(TCollection items, TAccumulate seed, TAccDlg func, out TAccumulate result)
-			where TCollection : concrete, IEnumerable<TSource>
+		public static TResult
+			Aggregate<TEnum, TSource, TAccumulate, TAccDlg, TResult, TResDlg>(this TEnum items, TAccumulate seed, TAccDlg accumulate, TResDlg resultSelector)
+			where TEnum : concrete, IEnumerator<TSource>
+			where TAccDlg : delegate TAccumulate(TAccumulate, TSource)
+			where TResDlg : delegate TResult(TAccumulate)
+		{
+			if (InternalAggregate<TEnum, TSource, TAccumulate, TAccDlg>(items, seed, accumulate, let result))
+				return resultSelector(result);
+
+			return resultSelector(seed);
+		}
+
+		static bool InternalAggregate<TEnum, TSource, TAccumulate, TAccDlg>(TEnum items, TAccumulate seed, TAccDlg func, out TAccumulate result)
+			where TEnum : concrete, IEnumerator<TSource>
 			where TAccDlg : delegate TAccumulate(TAccumulate, TSource)
 		{
 			TAccumulate sum = seed;
@@ -1500,6 +1594,8 @@ namespace System.Linq
 				mSpan = .(mPtr, 0, mLength);
 				return mSpan.GetEnumerator();
 			}
+
+			public static implicit operator Span<TValue> (Self it) =>.(it.mPtr, 0, it.mLength);
 		}
 
 		public extension DynamicArray<TValue> : IDisposable
@@ -1514,7 +1610,7 @@ namespace System.Linq
 			}
 		}
 
-		public struct Grouping<TKey, TValue> : IEnumerable<TValue>, IEnumerator<TValue>, IDisposable, IResettable
+		public struct Grouping<TKey, TValue> : IEnumerable<TValue>,  IDisposable, IResettable
 		{
 			List<TValue> mValues;
 			int mIndex = 0;
@@ -1529,14 +1625,6 @@ namespace System.Linq
 			public void Reset() mut
 			{
 				mIndex = 0;
-			}
-
-			public Result<TValue> GetNext() mut
-			{
-				if (mIndex == mValues.Count)
-					return .Err;
-
-				return .Ok(mValues[mIndex++]);
 			}
 
 			public List<TValue>.Enumerator GetEnumerator()
@@ -1555,56 +1643,58 @@ namespace System.Linq
 			}
 		}
 
-		public class GroupByResult<TKey, TValue> :
-			IEnumerator<Grouping<TKey, TValue>>, IRefEnumerator<Grouping<TKey, TValue>*>, IEnumerable<Grouping<TKey, TValue>>, IResettable
+		public class GroupByResult<TKey, TValue> : IEnumerable<Grouping<TKey, TValue>>
 			where bool : operator TKey == TKey//where TKey : IHashable
 		{
 			DynamicArray<Grouping<TKey, TValue>> mResults = .() ~ mResults.Dispose();
-			int mIndex = 0;
 
 			public int Count => mResults.Length;
-
-			public this()
-			{
-			}
-
-			public void Reset()
-			{
-				mIndex = 0;
-			}
-
-			public Result<Grouping<TKey, TValue>> GetNext()
-			{
-				if (mIndex < mResults.Length)
-					return .Ok(mResults[mIndex++]);
-
-				return .Err;
-			}
-
-			public Span<Grouping<TKey, TValue>>.Enumerator GetEnumerator()
-			{
-				return mResults.GetEnumerator();
-			}
-
-			public Result<Grouping<TKey, TValue>*> GetNextRef()
-			{
-				if (mIndex < mResults.Length)
-					return .Ok(&mResults[mIndex++]);
-
-				return .Err;
-			}
-
-			public ref Grouping<TKey, TValue> this[int index] => ref mResults[index];
 
 			public void Add(Grouping<TKey, TValue> group)
 			{
 				mResults.Add(group);
 			}
+
+			public ref Grouping<TKey, TValue> this[int index] => ref mResults[index];
+
+			typealias TSelf = GroupByResult<TKey, TValue>;
+			public Enumerator GetEnumerator() => .(this);
+
+			public struct Enumerator: IRefEnumerator<Grouping<TKey, TValue>*>, IEnumerator<Grouping<TKey, TValue>>,  IResettable
+			{
+				TSelf mSelf;
+				Span<Grouping<TKey, TValue>> mSpan;
+				int mIndex = 0;
+
+				public this(TSelf self)
+				{
+					mSelf = self;
+					mSpan = self.mResults;
+				}
+
+				public Result<Grouping<TKey, TValue>> GetNext() mut {
+					if (mIndex < mSpan.Length)
+						return .Ok(mSpan[mIndex++]);
+
+					return .Err;
+
+				}
+
+				public Result<Grouping<TKey, TValue>*> GetNextRef() mut {
+					if (mIndex < mSpan.Length)
+						return .Ok(&mSpan[mIndex++]);
+
+					return .Err;
+				}
+
+				public void Reset() mut
+				{
+					mIndex = 0;
+				}
+			}
 		}
 
-		public struct GroupByEnumerable<TSource, TEnum, TKey, TKeyDlg, TValue, TValueDlg> :
-			IEnumerator<Grouping<TKey, TValue>>, IEnumerable<Grouping<TKey, TValue>>, IDisposable
-
+		public struct GroupByEnumerable<TSource, TEnum, TKey, TKeyDlg, TValue, TValueDlg> : IEnumerable<Grouping<TKey, TValue>>, IDisposable
 			where TEnum : concrete, IEnumerator<TSource>
 			where bool : operator TKey == TKey//where TKey : IHashable
 			where TKeyDlg : delegate TKey(TSource)
@@ -1624,7 +1714,7 @@ namespace System.Linq
 				mValueDlg = valueDlg;
 			}
 
-			public Result<Grouping<TKey, TValue>> GetNext() mut
+			Result<Grouping<TKey, TValue>> GetNext() mut
 			{
 				if (mIndex == -1)
 				{
@@ -1657,14 +1747,26 @@ namespace System.Linq
 				return .Err;
 			}
 
-			public Self GetEnumerator()
-			{
-				return this;
-			}
-
 			public void Dispose() mut
 			{
 				mIterator.Dispose();
+			}
+
+			typealias TSelf = GroupByEnumerable<TSource, TEnum, TKey, TKeyDlg, TValue, TValueDlg>;
+			public Enumerator GetEnumerator() => .(this);
+
+			public struct Enumerator:  IEnumerator<Grouping<TKey, TValue>>, IDisposable
+			{
+				TSelf mSelf;
+
+				public this(TSelf self)
+				{
+					mSelf = self;
+				}
+
+				public Result<Grouping<TKey, TValue>> GetNext() mut  => mSelf.GetNext();
+
+				public void Dispose() mut => mSelf.Dispose();
 			}
 		}
 
@@ -1678,6 +1780,16 @@ namespace System.Linq
 			return .(results, items.GetEnumerator(), key, scope (val) => val);
 		}
 
+		public static GroupByEnumerable<TSource, TEnum, TKey, TKeyDlg, TSource, delegate TSource(TSource)>
+			GroupBy<TEnum, TSource, TKey, TKeyDlg>(this TEnum items, TKeyDlg key, GroupByResult<TKey, TSource> results)
+			where TEnum : concrete, IEnumerator<TSource>
+			where TKeyDlg : delegate TKey(TSource)
+			where TKey : IHashable
+		{
+			//guess we could optimize out this scope with some code duplication
+			return .(results, items, key, scope (val) => val);
+		}
+
 		/*public static GroupByEnumerable<TSource, decltype(default(TCollection).GetEnumerator()), TKey, TKeyDlg,
 		TSource, delegate TSource(TSource)> GroupBy<TCollection, TSource, TKey, TKeyDlg>(this TCollection items, TKeyDlg
 		key, GroupByResult<TKey, TSource> results) where TCollection : concrete, IEnumerable<TSource> where TKeyDlg :
@@ -1687,7 +1799,7 @@ namespace System.Linq
 			return .(results, items.GetEnumerator(), key, scope (val) => val);
 		}*/
 #endregion
-		struct UnionEnumerable<TSource, TEnum, TEnum2> : IEnumerator<TSource>, IEnumerable<TSource>, IDisposable
+		struct UnionEnumerable<TSource, TEnum, TEnum2> : IEnumerable<TSource>, IDisposable
 			where TEnum : concrete, IEnumerator<TSource>
 			where TEnum2 : concrete, IEnumerator<TSource>
 			where TSource : IHashable
@@ -1705,7 +1817,7 @@ namespace System.Linq
 				mDistinctValues = new .();
 			}
 
-			public Result<TSource> GetNext() mut
+			 Result<TSource> GetNext() mut
 			{
 				switch (mState) {
 				case 0:
@@ -1728,9 +1840,21 @@ namespace System.Linq
 				return .Err;
 			}
 
-			public Self GetEnumerator()
+			typealias TSelf = UnionEnumerable<TSource, TEnum, TEnum2> ;
+			public Enumerator GetEnumerator() => .(this);
+
+			public struct Enumerator:  IEnumerator<TSource>, IDisposable
 			{
-				return this;
+				TSelf mSelf;
+
+				public this(TSelf self)
+				{
+					mSelf = self;
+				}
+
+				public Result<TSource> GetNext() mut  => mSelf.GetNext();
+
+				public void Dispose() mut => mSelf.Dispose();
 			}
 
 			public void Dispose() mut
@@ -1750,7 +1874,34 @@ namespace System.Linq
 			return .(items.GetEnumerator(), other.GetEnumerator());
 		}
 
-		struct ExceptEnumerable<TSource, TEnum, TEnum2> : IEnumerator<TSource>, IEnumerable<TSource>, IDisposable
+		public static UnionEnumerable<TSource, TEnum, decltype(default(TCollection2).GetEnumerator())>
+			Union<TEnum, TCollection2, TSource>(this TEnum items, TCollection2 other)
+			where TEnum : concrete, IEnumerator<TSource>
+			where TCollection2 : concrete, IEnumerable<TSource>
+			where TSource : IHashable
+		{
+			return .(items, other.GetEnumerator());
+		}
+
+		public static UnionEnumerable<TSource, decltype(default(TCollection).GetEnumerator()), TEnum>
+			Union<TCollection,TEnum,  TSource>(this TCollection items, TEnum other)
+			where TCollection : concrete, IEnumerable<TSource>
+			where TEnum : concrete, IEnumerator<TSource>
+			where TSource : IHashable
+		{
+			return .(items.GetEnumerator(), other);
+		}
+
+		public static UnionEnumerable<TSource, TEnum,TEnum2>
+			Union<TEnum, TEnum2, TSource>(this TEnum items, TEnum2 other)
+			where TEnum : concrete, IEnumerator<TSource>
+			where TEnum2 : concrete, IEnumerator<TSource>
+			where TSource : IHashable
+		{
+			return .(items, other);
+		}
+
+		struct ExceptEnumerable<TSource, TEnum, TEnum2> : IEnumerable<TSource>, IDisposable
 			where TEnum : concrete, IEnumerator<TSource>
 			where TEnum2 : concrete, IEnumerator<TSource>
 			where TSource : IHashable
@@ -1768,7 +1919,7 @@ namespace System.Linq
 				mDistinctValues = new .();
 			}
 
-			public Result<TSource> GetNext() mut
+			 Result<TSource> GetNext() mut
 			{
 				switch (mState) {
 				case 0:
@@ -1790,9 +1941,21 @@ namespace System.Linq
 				return .Err;
 			}
 
-			public Self GetEnumerator()
+			typealias TSelf =ExceptEnumerable<TSource, TEnum, TEnum2>;
+			public Enumerator GetEnumerator() => .(this);
+
+			public struct Enumerator:  IEnumerator<TSource>, IDisposable
 			{
-				return this;
+				TSelf mSelf;
+
+				public this(TSelf self)
+				{
+					mSelf = self;
+				}
+
+				public Result<TSource> GetNext() mut  => mSelf.GetNext();
+
+				public void Dispose() mut => mSelf.Dispose();
 			}
 
 			public void Dispose() mut
@@ -1812,7 +1975,34 @@ namespace System.Linq
 			return .(items.GetEnumerator(), other.GetEnumerator());
 		}
 
-		struct IntersectEnumerable<TSource, TEnum, TEnum2> : IEnumerator<TSource>, IEnumerable<TSource>, IDisposable
+		public static ExceptEnumerable<TSource, TEnum, decltype(default(TCollection2).GetEnumerator())>
+			Except<TEnum, TCollection2, TSource>(this TEnum items, TCollection2 other)
+			where TEnum : concrete, IEnumerator<TSource>
+			where TCollection2 : concrete, IEnumerable<TSource>
+			where TSource : IHashable
+		{
+			return .(items, other.GetEnumerator());
+		}
+		
+		public static ExceptEnumerable<TSource, decltype(default(TCollection).GetEnumerator()), TEnum>
+			Except<TCollection, TEnum, TSource>(this TCollection items, TEnum other)
+			where TCollection : concrete, IEnumerable<TSource>
+			where TEnum : concrete, IEnumerator<TSource>
+			where TSource : IHashable
+		{
+			return .(items.GetEnumerator(), other);
+		}
+
+		public static ExceptEnumerable<TSource, TEnum, TEnum2>
+			Except<TEnum, TEnum2, TSource>(this TEnum items, TEnum2 other)
+			where TEnum : concrete, IEnumerator<TSource>
+			where TEnum2 : concrete, IEnumerator<TSource>
+			where TSource : IHashable
+		{
+			return .(items, other);
+		}
+
+		struct IntersectEnumerable<TSource, TEnum, TEnum2> :  IEnumerable<TSource>, IDisposable
 			where TEnum : concrete, IEnumerator<TSource>
 			where TEnum2 : concrete, IEnumerator<TSource>
 			where TSource : IHashable
@@ -1829,7 +2019,7 @@ namespace System.Linq
 				mDistinctValues = new .();
 			}
 
-			public Result<TSource> GetNext() mut
+			 Result<TSource> GetNext() mut
 			{
 				switch (mState)
 				{
@@ -1852,9 +2042,21 @@ namespace System.Linq
 				return .Err;
 			}
 
-			public Self GetEnumerator()
+			typealias TSelf =IntersectEnumerable<TSource, TEnum, TEnum2>;
+			public Enumerator GetEnumerator() => .(this);
+
+			public struct Enumerator:  IEnumerator<TSource>, IDisposable
 			{
-				return this;
+				TSelf mSelf;
+
+				public this(TSelf self)
+				{
+					mSelf = self;
+				}
+
+				public Result<TSource> GetNext() mut  => mSelf.GetNext();
+
+				public void Dispose() mut => mSelf.Dispose();
 			}
 
 			public void Dispose() mut
@@ -1874,7 +2076,34 @@ namespace System.Linq
 			return .(items.GetEnumerator(), other.GetEnumerator());
 		}
 
-		struct ZipEnumerable<TSource, TEnum, TEnum2, TResult, TSelect> : IEnumerator<TResult>, IEnumerable<TResult>, IDisposable
+		public static IntersectEnumerable<TSource, TEnum, decltype(default(TCollection2).GetEnumerator())>
+			Intersect<TEnum, TCollection2, TSource>(this TEnum items, TCollection2 other)
+			where TEnum : concrete, IEnumerator<TSource>
+			where TCollection2 : concrete, IEnumerable<TSource>
+			where TSource : IHashable
+		{
+			return .(items, other.GetEnumerator());
+		}
+
+		public static IntersectEnumerable<TSource, decltype(default(TCollection).GetEnumerator()), TEnum>
+			Intersect<TCollection, TEnum, TSource>(this TCollection items, TEnum other)
+			where TCollection : concrete, IEnumerable<TSource>
+			where TEnum : concrete, IEnumerator<TSource>
+			where TSource : IHashable
+		{
+			return .(items.GetEnumerator(), other);
+		}
+
+		public static IntersectEnumerable<TSource, TEnum, TEnum2>
+			Intersect<TEnum, TEnum2, TSource>(this TEnum items, TEnum2 other)
+			where TEnum : concrete, IEnumerator<TSource>
+			where TEnum2 : concrete, IEnumerator<TSource>
+			where TSource : IHashable
+		{
+			return .(items, other);
+		}
+
+		struct ZipEnumerable<TSource, TEnum, TEnum2, TResult, TSelect> :  IEnumerable<TResult>, IDisposable
 			where TEnum : concrete, IEnumerator<TSource>
 			where TEnum2 : concrete, IEnumerator<TSource>
 			where TSelect : delegate TResult(TSource first, TSource second)
@@ -1890,7 +2119,7 @@ namespace System.Linq
 				mSelect = select;
 			}
 
-			public Result<TResult> GetNext() mut
+			 Result<TResult> GetNext() mut
 			{
 				if (mSource.mEnum.GetNext() case .Ok(let first))
 					if (mOther.mEnum.GetNext() case .Ok(let second))
@@ -1899,10 +2128,23 @@ namespace System.Linq
 				return .Err;
 			}
 
-			public Self GetEnumerator()
+			typealias TSelf =ZipEnumerable<TSource, TEnum, TEnum2, TResult, TSelect>;
+			public Enumerator GetEnumerator() => .(this);
+
+			public struct Enumerator:  IEnumerator<TResult>, IDisposable
 			{
-				return this;
+				TSelf mSelf;
+
+				public this(TSelf self)
+				{
+					mSelf = self;
+				}
+
+				public Result<TResult> GetNext() mut  => mSelf.GetNext();
+
+				public void Dispose() mut => mSelf.Dispose();
 			}
+
 
 			public void Dispose() mut
 			{
@@ -1920,7 +2162,34 @@ namespace System.Linq
 			return .(items.GetEnumerator(), other.GetEnumerator(), select);
 		}
 
-		struct ConcatEnumerable<TSource, TEnum, TEnum2> : IEnumerator<TSource>, IEnumerable<TSource>, IDisposable
+		public static ZipEnumerable<TSource,TEnum, decltype(default(TCollection2).GetEnumerator()), TResult, TSelect>
+			Zip<TEnum, TCollection2, TSource, TResult, TSelect>(this TEnum items, TCollection2 other, TSelect select)
+			where TEnum : concrete, IEnumerator<TSource>
+			where TCollection2 : concrete, IEnumerable<TSource>
+			where TSelect : delegate TResult(TSource first, TSource second)
+		{
+			return .(items, other.GetEnumerator(), select);
+		}
+
+		public static ZipEnumerable<TSource, decltype(default(TCollection).GetEnumerator()),TEnum, TResult, TSelect>
+			Zip<TCollection, TEnum, TSource, TResult, TSelect>(this TCollection items, TEnum other, TSelect select)
+			where TCollection : concrete, IEnumerable<TSource>
+			where TEnum : concrete, IEnumerator<TSource>
+			where TSelect : delegate TResult(TSource first, TSource second)
+		{
+			return .(items.GetEnumerator(), other, select);
+		}
+
+		public static ZipEnumerable<TSource, TEnum, TEnum2, TResult, TSelect>
+			Zip<TEnum, TEnum2, TSource, TResult, TSelect>(this TEnum items, TEnum2 other, TSelect select)
+			where TEnum : concrete, IEnumerator<TSource>
+			where TEnum2 : concrete, IEnumerator<TSource>
+			where TSelect : delegate TResult(TSource first, TSource second)
+		{
+			return .(items, other, select);
+		}
+
+		struct ConcatEnumerable<TSource, TEnum, TEnum2> : IEnumerable<TSource>, IDisposable
 			where TEnum : concrete, IEnumerator<TSource>
 			where TEnum2 : concrete, IEnumerator<TSource>
 		{
@@ -1934,7 +2203,7 @@ namespace System.Linq
 				mSecond = secondEnumerator;
 			}
 
-			public Result<TSource> GetNext() mut
+			 Result<TSource> GetNext() mut
 			{
 				switch (mState) {
 				case 0:
@@ -1953,9 +2222,21 @@ namespace System.Linq
 				return .Err;
 			}
 
-			public Self GetEnumerator()
+			typealias TSelf =ConcatEnumerable<TSource, TEnum, TEnum2> ;
+			public Enumerator GetEnumerator() => .(this);
+
+			public struct Enumerator:  IEnumerator<TSource>, IDisposable
 			{
-				return this;
+				TSelf mSelf;
+
+				public this(TSelf self)
+				{
+					mSelf = self;
+				}
+
+				public Result<TSource> GetNext() mut  => mSelf.GetNext();
+
+				public void Dispose() mut => mSelf.Dispose();
 			}
 
 			public void Dispose() mut
@@ -1965,20 +2246,78 @@ namespace System.Linq
 			}
 		}
 
+		
+
 		public static ConcatEnumerable<TSource, decltype(default(TCollection).GetEnumerator()), decltype(default(TCollection2).GetEnumerator())>
 			Concat<TCollection, TCollection2, TSource>(this TCollection items, TCollection2 other)
 			where TCollection : concrete, IEnumerable<TSource>
 			where TCollection2 : concrete, IEnumerable<TSource>
+			where TSource : IHashable
 		{
 			return .(items.GetEnumerator(), other.GetEnumerator());
+		}
+
+		public static ConcatEnumerable<TSource, TEnum, decltype(default(TCollection2).GetEnumerator())>
+			Concat<TEnum, TCollection2, TSource>(this TEnum items, TCollection2 other)
+			where TEnum : concrete, IEnumerator<TSource>
+			where TCollection2 : concrete, IEnumerable<TSource>
+			where TSource : IHashable
+		{
+			return .(items, other.GetEnumerator());
+		}
+
+		public static ConcatEnumerable<TSource, decltype(default(TCollection).GetEnumerator()), TEnum>
+			Concat<TCollection, TEnum, TSource>(this TCollection items, TEnum other)
+			where TCollection : concrete, IEnumerable<TSource>
+			where TEnum : concrete, IEnumerator<TSource>
+			where TSource : IHashable
+		{
+			return .(items.GetEnumerator(), other);
+		}
+
+		public static ConcatEnumerable<TSource, TEnum, TEnum2>
+			Concat<TEnum, TEnum2, TSource>(this TEnum items, TEnum2 other)
+			where TEnum : concrete, IEnumerator<TSource>
+			where TEnum2 : concrete, IEnumerator<TSource>
+			where TSource : IHashable
+		{
+			return .(items, other);
 		}
 
 		public static ConcatEnumerable<TSource, decltype(default(TCollection).GetEnumerator()), decltype(default(TCollection2).GetEnumerator())>
 			Append<TCollection, TCollection2, TSource>(this TCollection items, TCollection2 other)
 			where TCollection : concrete, IEnumerable<TSource>
 			where TCollection2 : concrete, IEnumerable<TSource>
+			where TSource : IHashable
 		{
 			return .(items.GetEnumerator(), other.GetEnumerator());
+		}
+
+		public static ConcatEnumerable<TSource, TEnum, decltype(default(TCollection2).GetEnumerator())>
+			Append<TEnum, TCollection2, TSource>(this TEnum items, TCollection2 other)
+			where TEnum : concrete, IEnumerator<TSource>
+			where TCollection2 : concrete, IEnumerable<TSource>
+			where TSource : IHashable
+		{
+			return .(items, other.GetEnumerator());
+		}
+
+		public static ConcatEnumerable<TSource, decltype(default(TCollection).GetEnumerator()), TEnum>
+			Append<TCollection, TEnum, TSource>(this TCollection items, TEnum other)
+			where TCollection : concrete, IEnumerable<TSource>
+			where TEnum : concrete, IEnumerator<TSource>
+			where TSource : IHashable
+		{
+			return .(items.GetEnumerator(), other);
+		}
+
+		public static ConcatEnumerable<TSource, TEnum, TEnum2>
+			Append<TEnum, TEnum2, TSource>(this TEnum items, TEnum2 other)
+			where TEnum : concrete, IEnumerator<TSource>
+			where TEnum2 : concrete, IEnumerator<TSource>
+			where TSource : IHashable
+		{
+			return .(items, other);
 		}
 
 		public static ConcatEnumerable<TSource, decltype(default(TCollection2).GetEnumerator()), decltype(default(TCollection).GetEnumerator())>
@@ -1989,6 +2328,30 @@ namespace System.Linq
 			return .(other.GetEnumerator(), items.GetEnumerator());
 		}
 
+		public static ConcatEnumerable<TSource, decltype(default(TCollection2).GetEnumerator()), TEnum>
+			Prepend<TEnum, TCollection2, TSource>(this TEnum items, TCollection2 other)
+			where TEnum : concrete, IEnumerator<TSource>
+			where TCollection2 : concrete, IEnumerable<TSource>
+		{
+			return .(other.GetEnumerator(), items);
+		}
+
+		public static ConcatEnumerable<TSource, TEnum, decltype(default(TCollection).GetEnumerator())>
+			Prepend<TCollection, TEnum, TSource>(this TCollection items, TEnum other)
+			where TCollection : concrete, IEnumerable<TSource>
+			where TEnum : concrete, IEnumerator<TSource>
+		{
+			return .(other, items.GetEnumerator());
+		}
+
+		public static ConcatEnumerable<TSource, TEnum2, TEnum>
+			Prepend<TEnum, TEnum2, TSource>(this TEnum items, TEnum2 other)
+			where TEnum : concrete, IEnumerator<TSource>
+			where TEnum2 : concrete, IEnumerator<TSource>
+		{
+			return .(other, items);
+		}
+
 		static class OrderByComparison<T>
 			where int : operator T <=> T
 		{
@@ -1996,7 +2359,7 @@ namespace System.Linq
 			public readonly static TCompare Comparison = (new (lhs, rhs) => lhs <=> rhs) ~ delete _;
 		}
 
-		struct SortedEnumerable<TSource, TEnum, TKey, TKeyDlg, TCompare> : IEnumerator<(TKey key, TSource value)>, IEnumerable<(TKey key, TSource value)>, IDisposable
+		struct SortedEnumerable<TSource, TEnum, TKey, TKeyDlg, TCompare> : IEnumerator<(TKey key, TSource value)>,  IDisposable
 			where TEnum : concrete, IEnumerator<TSource>
 			where TKeyDlg : delegate TKey(TSource)
 			where TCompare : delegate int(TKey lhs, TKey rhs)
@@ -2040,11 +2403,6 @@ namespace System.Linq
 					return .Ok(mOrderedList[mIndex++]);
 
 				return .Err;
-			}
-
-			public Self GetEnumerator()
-			{
-				return this;
 			}
 
 			public void Dispose() mut
@@ -2140,7 +2498,7 @@ namespace System.Linq
 			}
 		}*/
 
-		struct OrderByEnumerable<TSource, TEnum, TKey, TKeyDlg, TCompare> : IEnumerator<TSource>, IEnumerable<TSource>, IDisposable
+		struct OrderByEnumerable<TSource, TEnum, TKey, TKeyDlg, TCompare> : IEnumerable<TSource>, IDisposable
 			where TEnum : concrete, IEnumerator<TSource>
 			where TKeyDlg : delegate TKey(TSource)
 			where TCompare : delegate int(TKey lhs, TKey rhs)
@@ -2153,7 +2511,7 @@ namespace System.Linq
 				mSorted = .(enumerator, key, compare, descending);
 			}
 
-			public Result<TSource> GetNext() mut
+			 Result<TSource> GetNext() mut
 			{
 				if (mSorted.GetNext() case .Ok(let val))
 					return .Ok(val.value);
@@ -2161,9 +2519,21 @@ namespace System.Linq
 				return .Err;
 			}
 
-			public Self GetEnumerator()
+			typealias TSelf = OrderByEnumerable<TSource, TEnum, TKey, TKeyDlg, TCompare>;
+			public Enumerator GetEnumerator() => .(this);
+
+			public struct Enumerator:  IEnumerator<TSource>, IDisposable
 			{
-				return this;
+				TSelf mSelf;
+
+				public this(TSelf self)
+				{
+					mSelf = self;
+				}
+
+				public Result<TSource> GetNext() mut  => mSelf.GetNext();
+
+				public void Dispose() mut => mSelf.Dispose();
 			}
 
 			public void Dispose() mut
@@ -2199,6 +2569,15 @@ namespace System.Linq
 			return .(items.GetEnumerator(), keySelect, OrderByComparison<TKey>.Comparison, false);
 		}
 
+		public static OrderByEnumerable<TSource, TEnum, TKey, TKeyDlg, delegate int(TKey lhs, TKey rhs)>
+			OrderBy<TEnum, TSource, TKey, TKeyDlg>(this TEnum items, TKeyDlg keySelect)
+			where TEnum : concrete, IEnumerator<TSource>
+			where TKeyDlg : delegate TKey(TSource)
+			where int : operator TKey <=> TKey
+		{
+			return .(items, keySelect, OrderByComparison<TKey>.Comparison, false);
+		}
+
 		public static OrderByEnumerable<TSource, decltype(default(TCollection).GetEnumerator()), TKey, TKeyDlg, TCompare>
 			OrderBy<TCollection, TSource, TKey, TKeyDlg, TCompare>(this TCollection items, TKeyDlg keySelect, TCompare comparison)
 			where TCollection : concrete, IEnumerable<TSource>
@@ -2206,6 +2585,15 @@ namespace System.Linq
 			where TCompare : delegate int(TKey lhs, TKey rhs)
 		{
 			return .(items.GetEnumerator(), keySelect, comparison, false);
+		}
+
+		public static OrderByEnumerable<TSource, TEnum, TKey, TKeyDlg, TCompare>
+			OrderBy<TEnum, TSource, TKey, TKeyDlg, TCompare>(this TEnum items, TKeyDlg keySelect, TCompare comparison)
+			where TEnum : concrete, IEnumerator<TSource>
+			where TKeyDlg : delegate TKey(TSource)
+			where TCompare : delegate int(TKey lhs, TKey rhs)
+		{
+			return .(items, keySelect, comparison, false);
 		}
 
 		public static OrderByEnumerable<TSource, decltype(default(TCollection).GetEnumerator()), TKey, TKeyDlg, delegate int(TKey lhs, TKey rhs)>
@@ -2217,6 +2605,15 @@ namespace System.Linq
 			return .(items.GetEnumerator(), keySelect, OrderByComparison<TKey>.Comparison, true);
 		}
 
+		public static OrderByEnumerable<TSource, TEnum, TKey, TKeyDlg, delegate int(TKey lhs, TKey rhs)>
+			OrderByDescending<TEnum, TSource, TKey, TKeyDlg>(this TEnum items, TKeyDlg keySelect)
+			where TEnum : concrete, IEnumerator<TSource>
+			where TKeyDlg : delegate TKey(TSource)
+			where int : operator TKey <=> TKey
+		{
+			return .(items, keySelect, OrderByComparison<TKey>.Comparison, true);
+		}
+
 		public static OrderByEnumerable<TSource, decltype(default(TCollection).GetEnumerator()), TKey, TKeyDlg, TCompare>
 			OrderByDescending<TCollection, TSource, TKey, TKeyDlg, TCompare>(this TCollection items, TKeyDlg keySelect, TCompare comparison)
 			where TCollection : concrete, IEnumerable<TSource>
@@ -2224,6 +2621,15 @@ namespace System.Linq
 			where TCompare : delegate int(TKey lhs, TKey rhs)
 		{
 			return .(items.GetEnumerator(), keySelect, comparison, true);
+		}
+
+		public static OrderByEnumerable<TSource, TEnum, TKey, TKeyDlg, TCompare>
+			OrderByDescending<TEnum, TSource, TKey, TKeyDlg, TCompare>(this TEnum items, TKeyDlg keySelect, TCompare comparison)
+			where TEnum : concrete, IEnumerator<TSource>
+			where TKeyDlg : delegate TKey(TSource)
+			where TCompare : delegate int(TKey lhs, TKey rhs)
+		{
+			return .(items, keySelect, comparison, true);
 		}
 
 		/*struct ThenByEnumerable<TSource, TEnum, TKey, TSubKey, TKeyDlg, TCompare> : IEnumerator<TSource>, IEnumerable<TSource>, IDisposable
