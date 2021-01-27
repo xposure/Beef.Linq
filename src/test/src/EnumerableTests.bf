@@ -661,15 +661,16 @@ namespace System.Linq
 #endif
 #endregion
 
-		[AttributeUsage(.Struct,.AlwaysIncludeTarget, ReflectUser=.Methods)]
+		[AttributeUsage(.Method)]
 		public struct MyTestAttribute : Attribute{
 
 		}
 
-		[MyTest]
+		[Reflect(.Methods), AlwaysInclude(IncludeAllMethods=true) ]
 		public struct ReflectionTest
 		{
-			public void HelloWorld(){}
+			[MyTest, AlwaysInclude, Reflect]
+			public int HelloWorld(){return 1;}
 		}
 
 #region Reported bugs
@@ -677,8 +678,8 @@ namespace System.Linq
 		[Test]
 		public static void HitGetMethodsReflectionIssue()
 		{
-			let actual = typeof(ReflectionTest).GetMethods(.Public | .NonPublic).Where((m) => m.GetCustomAttribute<MyTestAttribute>() case .Ok).ToList(.. scope .());
-			Test.Assert(actual.Count == 0);
+			let actual = typeof(ReflectionTest).GetMethods().Where((m) => m.GetCustomAttribute<MyTestAttribute>() case .Ok).ToList(.. scope .());
+			Test.Assert(actual.Count == 1);
 		}
 
 		[Test]

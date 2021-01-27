@@ -6,48 +6,56 @@ namespace System.Linq
 {
 	public static
 	{
-		
-
 		public static class Enumerable
 		{
-			public struct EmptyEnumerable<TSource> : IEnumerable<TSource>, IEnumerator<TSource>
+			public struct EmptyEnumerable<TSource> : IEnumerable<TSource>
 			{
-				public Self GetEnumerator()
-				{
-					return this;
-				}
+				public Enumerator GetEnumerator() => .();
 
-				public Result<TSource> GetNext()
+				public struct Enumerator : IEnumerator<TSource>
 				{
-					return .Err;
+					public Result<TSource> GetNext()
+					{
+						return .Err;
+					}
 				}
 			}
 
 			public static EmptyEnumerable<TSource> Empty<TSource>() => .();
 
-			public struct RangeEnumerable<TSource> : IEnumerator<TSource>, IEnumerable<TSource> where TSource : operator TSource + int
+			public struct RangeEnumerable<TSource> : IEnumerable<TSource> where TSource : operator TSource + int
 			{
-				TSource mCurrent;
+				TSource mStart;
 				TSource mEnd;
 
 				public this(TSource start, TSource end)
 				{
-					mCurrent = start;
+					mStart = start;
 					mEnd = end;
 				}
 
-				public Result<TSource> GetNext() mut
-				{
-					if (mCurrent == mEnd)
-						return .Err;
+				public Enumerator GetEnumerator() => .(mStart, mEnd);
 
-					defer { mCurrent = mCurrent + 1; }
-					return .Ok(mCurrent);
-				}
-
-				public Self GetEnumerator()
+				public struct Enumerator : IEnumerator<TSource>
 				{
-					return this;
+					TSource mCurrent;
+					TSource mEnd;
+
+					public this(TSource start, TSource end)
+					{
+						mCurrent = start;
+						mEnd = end;
+					}
+
+					public Result<TSource> GetNext() mut
+					{
+						if (mCurrent == mEnd)
+							return .Err;
+
+						let next = mCurrent;
+						mCurrent = mCurrent + 1;
+						return .Ok(next);
+					}
 				}
 			}
 
@@ -66,7 +74,7 @@ namespace System.Linq
 				return .(start, end);
 			}
 
-			public struct RepeatEnumerable<TSource> : IEnumerator<TSource>, IEnumerable<TSource>
+			public struct RepeatEnumerable<TSource> : IEnumerable<TSource>
 			{
 				TSource mValue;
 				int mCount;
@@ -76,18 +84,27 @@ namespace System.Linq
 					mValue = value;
 					mCount = count;
 				}
+				
+				public Enumerator GetEnumerator() => .(mValue, mCount);
 
-				public Result<TSource> GetNext() mut
+				public struct Enumerator : IEnumerator<TSource>
 				{
-					if (--mCount >= 0)
-						return .Ok(mValue);
+					TSource mValue;
+					int mCount;
 
-					return .Err;
-				}
+					public this(TSource value, int count)
+					{
+						mValue = value;
+						mCount = count;
+					}
 
-				public Self GetEnumerator()
-				{
-					return this;
+					public Result<TSource> GetNext() mut
+					{
+						if (--mCount >= 0)
+							return .Ok(mValue);
+
+						return .Err;
+					}
 				}
 			}
 
@@ -100,8 +117,22 @@ namespace System.Linq
 
 
 		#region Matching
+		public static bool All<TEnum, TSource, TPredicate>(this TEnum items, TPredicate predicate)
+			where TEnum : concrete, IEnumerator<TSource>
+			where TPredicate : delegate bool(TSource)
+		{
+			return InternalAll(items, predicate);
+		}
+
 		public static bool All<TCollection, TSource, TPredicate>(this TCollection items, TPredicate predicate)
 			where TCollection : concrete, IEnumerable<TSource>
+			where TPredicate : delegate bool(TSource)
+		{
+			return InternalAll<decltype(default(TCollection).GetEnumerator()), TSource, TPredicate>(items.GetEnumerator(), predicate);
+		}
+
+		static bool InternalAll<TEnum, TSource, TPredicate>(TEnum items, TPredicate predicate)
+			where TEnum : concrete, IEnumerator<TSource>
 			where TPredicate : delegate bool(TSource)
 		{
 			using (var iterator = Iterator.Wrap(items))
@@ -152,7 +183,6 @@ namespace System.Linq
 
 			return false;
 		}
-
 
 		public static bool SequenceEquals<TLeft, TRight, TSource>(this TLeft left, TRight right)
 			where TLeft : concrete, IEnumerable<TSource>
@@ -488,6 +518,12 @@ namespace System.Linq
 #region Enumerable Chains
 		struct Iterator
 		{
+			public static Iterator<TEnum, TSource> Wrap<TEnum, TSource>(TEnum items)
+				where TEnum : concrete, IEnumerator<TSource>
+			{
+				return .(items);
+			}
+
 			public static Iterator<decltype(default(TCollection).GetEnumerator()), TSource> Wrap<TCollection, TSource>(TCollection items)
 				where TCollection : concrete, IEnumerable<TSource>
 			{
@@ -525,21 +561,17 @@ namespace System.Linq
 			}
 		}
 
-		struct WrapEnumerable<TEnum, TValue> : IEnumerable<TValue>, IEnumerator<TValue>
-			where TEnum : concrete, IEnumerator<TValue>
+		struct WrapEnumerable<TEnum, TSource> : IEnumerator<TSource>
+			where TEnum : concrete, IEnumerator<TSource>
 		{
 			private TEnum mEnum;
+
 			public this(TEnum enumerator)
 			{
 				mEnum = enumerator;
 			}
 
-			public Self GetEnumerator()
-			{
-				return this;
-			}
-
-			public Result<TValue> GetNext() mut => mEnum.GetNext();
+			public Result<TSource> GetNext() mut => mEnum.GetNext();
 		}
 
 		struct SelectEnumerable<TSource, TEnum, TSelect, TResult> : Iterator<TEnum, TSource>, IEnumerator<TResult>, IEnumerable<TResult>
@@ -879,7 +911,7 @@ namespace System.Linq
 			return .(items.GetEnumerator());
 		}
 
-		struct ReverseEnumerable<TSource, TEnum> : IEnumerator<TSource>, IEnumerable<TSource>, IDisposable
+		struct ReverseEnumerable<TSource, TEnum> : IEnumerable<TSource>, IDisposable
 			where TEnum : concrete, IEnumerator<TSource>
 		{
 			List<TSource> mCopyValues;
@@ -914,16 +946,29 @@ namespace System.Linq
 					return .Err;
 				}
 			}
-
-			public Self GetEnumerator()
-			{
-				return this;
-			}
-
+			
 			public void Dispose() mut
 			{
 				mEnum.Dispose();
 				DeleteAndNullify!(mCopyValues);
+			}
+
+			typealias TSelf = ReverseEnumerable<TSource, TEnum>;
+			public Enumerator GetEnumerator() => .(this);
+
+			public struct Enumerator: IEnumerator<TSource>, IDisposable
+			{
+				TSelf mEnum;
+				public this(TSelf enumerator)
+				{
+					mEnum = enumerator;
+				}
+				public Result<TSource> GetNext() mut => mEnum.GetNext();
+
+				public void Dispose() mut
+				{
+					mEnum.Dispose();
+				}
 			}
 		}
 
@@ -995,10 +1040,20 @@ namespace System.Linq
 				return .Err;
 			}
 
-			public Self GetEnumerator()
+			/*typealias TSelf = MapEnumerable<TSource, TEnum, TResult>;
+			public Enumerator GetEnumerator() => .(this);
+
+			public struct Enumerator: IEnumerator<TResult>
 			{
-				return this;
-			}
+				TSelf mEnum;
+				public this(TSelf enumerator)
+				{
+					mEnum = enumerator;
+				}
+				public Result<TResult> GetNext() mut => mEnum.GetNext();
+			}*/
+
+			public Self GetEnumerator() => this;
 		}
 
 		public static MapEnumerable<TSource, decltype(default(TCollection).GetEnumerator()), TResult>
