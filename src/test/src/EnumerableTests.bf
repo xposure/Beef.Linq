@@ -629,7 +629,7 @@ namespace System.Linq
 			}
 		}
 
-		/*[Test]
+		[Test]
 		public static void ThenBy()
 		{
 			{
@@ -650,13 +650,12 @@ namespace System.Linq
 			{
 				//orderby has some temp allocations, this test is just to make sure those temp allocations don't fail
 				let data = scope List<(int x, int y)>() { (1, 2), (1, 3), (3, 2), (0, 4), (2, 0) };
-				let actual = data.OrderBy((it) => it.x, (l, r) => l - r).OrderBy((it) => it.x, (l, r) => r -
-		l).ToList(.. scope .());
+				let actual = data.OrderBy((it) => it.x, (l, r) => l - r).OrderBy((it) => it.x, (l, r) => r - l).ToList(.. scope .());
 
 				let expected = scope List<(int x, int y)>() { (3, 2), (2, 0), (1, 2), (1, 3), (0, 4)};
 				Test.Assert(actual.SequenceEquals(expected));
 			}
-		}*/
+		}
 
 #region Failures
 #if INCLUDE_FAILURES
