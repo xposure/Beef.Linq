@@ -1438,7 +1438,7 @@ namespace System.Linq
 			where TCollection : concrete, IEnumerable<TSource>
 			where TAccumulate : delegate TSource(TSource, TSource)
 		{
-			if (InternalAggregate<decltype(default(TCollection).GetEnumerator()), TSource, TSource, TAccumulate>(items.GetEnumerator(), default(TSource), accumulate, let result))
+			if (InternalAggregate<decltype(default(TCollection).GetEnumerator()), TSource, TAccumulate>(items.GetEnumerator(), accumulate, let result))
 				return result;
 
 			Runtime.FatalError("No elements in the sequence.");
@@ -1449,7 +1449,7 @@ namespace System.Linq
 			where TEnum : concrete, IEnumerator<TSource>
 			where TAccumulate : delegate TSource(TSource, TSource)
 		{
-			if (InternalAggregate<TEnum, TSource, TSource, TAccumulate>(items, default(TSource), accumulate, let result))
+			if (InternalAggregate<TEnum, TSource, TAccumulate>(items, accumulate, let result))
 				return result;
 
 			Runtime.FatalError("No elements in the sequence.");
@@ -1480,10 +1480,10 @@ namespace System.Linq
 		public static TResult
 			Aggregate<TCollection, TSource, TAccumulate, TAccDlg, TResult, TResDlg>(this TCollection items, TAccDlg accumulate, TResDlg resultSelector)
 			where TCollection : concrete, IEnumerable<TSource>
-			where TAccDlg : delegate TAccumulate(TAccumulate, TSource)
-			where TResDlg : delegate TResult(TAccumulate)
+			where TAccDlg : delegate TSource(TSource, TSource)
+			where TResDlg : delegate TResult(TSource)
 		{
-			if (InternalAggregate<decltype(default(TCollection).GetEnumerator()), TSource, TAccumulate, TAccDlg>(items.GetEnumerator(), default(TAccumulate), accumulate, let result))
+			if (InternalAggregate<decltype(default(TCollection).GetEnumerator()), TSource, TAccDlg>(items.GetEnumerator(), accumulate, let result))
 				return resultSelector(result);
 
 			return resultSelector(default);
@@ -1492,10 +1492,10 @@ namespace System.Linq
 		public static TResult
 			Aggregate<TEnum, TSource, TAccumulate, TAccDlg, TResult, TResDlg>(this TEnum items, TAccDlg accumulate, TResDlg resultSelector)
 			where TEnum : concrete, IEnumerator<TSource>
-			where TAccDlg : delegate TAccumulate(TAccumulate, TSource)
-			where TResDlg : delegate TResult(TAccumulate)
+			where TAccDlg : delegate TSource(TSource, TSource)
+			where TResDlg : delegate TResult(TSource)
 		{
-			if (InternalAggregate<TEnum,  TAccumulate, TAccDlg>(items, accumulate, let result))
+			if (InternalAggregate<TEnum, TSource, TAccDlg>(items, accumulate, let result))
 				return resultSelector(result);
 
 			return resultSelector(default);
@@ -1525,9 +1525,9 @@ namespace System.Linq
 			return resultSelector(seed);
 		}
 
-		static bool InternalAggregate<TEnum, TSource, TAccumulate>(TEnum items, TAccumulate accumulate, out TSource aggregate)
+		static bool InternalAggregate<TEnum, TSource, TAccDlg>(TEnum items, TAccDlg accumulate, out TSource aggregate)
 			where TEnum : concrete, IEnumerator<TSource>
-			where TAccumulate : delegate TSource(TSource, TSource)
+			where TAccDlg : delegate TSource(TSource, TSource)
 		{
 			aggregate = default;
 			using (var iterator = Iterator.Wrap(items))
