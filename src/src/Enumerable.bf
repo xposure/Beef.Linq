@@ -1495,7 +1495,7 @@ namespace System.Linq
 			where TAccDlg : delegate TAccumulate(TAccumulate, TSource)
 			where TResDlg : delegate TResult(TAccumulate)
 		{
-			if (InternalAggregate<TEnum, TSource, TAccumulate, TAccDlg>(items, default(TAccumulate), accumulate, let result))
+			if (InternalAggregate<TEnum,  TAccumulate, TAccDlg>(items, accumulate, let result))
 				return resultSelector(result);
 
 			return resultSelector(default);
@@ -1524,6 +1524,26 @@ namespace System.Linq
 
 			return resultSelector(seed);
 		}
+
+		static bool InternalAggregate<TEnum, TSource, TAccumulate>(TEnum items, TAccumulate accumulate, out TSource aggregate)
+			where TEnum : concrete, IEnumerator<TSource>
+			where TAccumulate : delegate TSource(TSource, TSource)
+		{
+			aggregate = default;
+			using (var iterator = Iterator.Wrap(items))
+			{
+				var enumerator = iterator.mEnum;
+
+				//I guess we need at least 2 elements to do an accumulation without a seed?
+				if (!(enumerator.GetNext() case .Ok(out aggregate)))
+					return false;
+
+				while (enumerator.GetNext() case .Ok(let val))
+					aggregate = accumulate(aggregate, val);
+			}
+			return true;
+		}
+
 
 		static bool InternalAggregate<TEnum, TSource, TAccumulate, TAccDlg>(TEnum items, TAccumulate seed, TAccDlg func, out TAccumulate result)
 			where TEnum : concrete, IEnumerator<TSource>

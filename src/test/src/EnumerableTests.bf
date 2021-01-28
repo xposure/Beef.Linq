@@ -89,26 +89,49 @@ namespace System.Linq
 		public static void Average()
 		{
 			let data = scope List<int>() { 1, 1, 2, 2, 4 };
-			let actual = data.Average();
-
-			Test.Assert(actual == 2);
+			{
+				let actual = data.Average();
+				Test.Assert(actual == 2);
+			}
+			{
+				let actual = data.GetEnumerator().Average();
+				Test.Assert(actual == 2);
+			}
 		}
+
 
 		[Test]
 		public static void Max()
 		{
-			let data = scope List<int>();
+			{
+				let data = scope List<int>();
 
-			var actual = data.Max();
-			Test.Assert(actual == default);
+				var actual = data.Max();
+				Test.Assert(actual == default);
 
-			data.Add(3);
-			actual = data.Max();
-			Test.Assert(actual == 3);
+				data.Add(3);
+				actual = data.Max();
+				Test.Assert(actual == 3);
 
-			data.Add(1);
-			actual = data.Max();
-			Test.Assert(actual == 3);
+				data.Add(1);
+				actual = data.Max();
+				Test.Assert(actual == 3);
+			}
+
+			{
+				let data = scope List<int>();
+
+				var actual = data.GetEnumerator().Max();
+				Test.Assert(actual == default);
+
+				data.Add(3);
+				actual = data.GetEnumerator().Max();
+				Test.Assert(actual == 3);
+
+				data.Add(1);
+				actual = data.GetEnumerator().Max();
+				Test.Assert(actual == 3);
+			}
 		}
 
 		[Test]
@@ -560,7 +583,6 @@ namespace System.Linq
 				let expected = scope List<(int x, int y)>() { (0, 4), (1, 2), (1, 3), (2, 0), (3, 2) };
 				Test.Assert(actual.SequenceEquals(expected));
 			}
-
 			{
 				let data = scope List<(int x, int y)>() { (1, 2), (1, 3), (3, 2), (0, 4), (2, 0) };
 				let actual = data.OrderBy((it) => it.x, (l, r) => l - r).ToList(.. scope .());
@@ -573,7 +595,7 @@ namespace System.Linq
 				let data = scope List<(int x, int y)>() { (1, 2), (1, 3), (3, 2), (0, 4), (2, 0) };
 				let actual = data.OrderBy((it) => it.x, (l, r) => l - r).OrderBy((it) => it.x, (l, r) => r - l).ToList(.. scope .());
 
-				let expected = scope List<(int x, int y)>() { (3, 2), (2, 0), (1, 2), (1, 3), (0, 4)};
+				let expected = scope List<(int x, int y)>() { (3, 2), (2, 0), (1, 2), (1, 3), (0, 4) };
 				Test.Assert(actual.SequenceEquals(expected));
 			}
 		}
@@ -589,7 +611,6 @@ namespace System.Linq
 				let expected = scope List<(int x, int y)>() { (0, 4), (1, 2), (1, 3), (2, 0), (3, 2) };
 				Test.Assert(actual.SequenceEquals(expected.Reverse()));
 			}
-
 			{
 				let data = scope List<(int x, int y)>() { (1, 2), (1, 3), (3, 2), (0, 4), (2, 0) };
 				let actual = data.OrderByDescending((it) => it.x, (l, r) => l - r).ToList(.. scope .());
@@ -602,7 +623,7 @@ namespace System.Linq
 				let data = scope List<(int x, int y)>() { (1, 2), (1, 3), (3, 2), (0, 4), (2, 0) };
 				let actual = data.OrderByDescending((it) => it.x, (l, r) => l - r).OrderBy((it) => it.x, (l, r) => r - l).ToList(.. scope .());
 
-				let expected = scope List<(int x, int y)>() { (3, 2), (2, 0),(1, 3),  (1, 2), (0, 4)};
+				let expected = scope List<(int x, int y)>() { (3, 2), (2, 0), (1, 3), (1, 2), (0, 4) };
 				Test.Assert(actual.SequenceEquals(expected));
 			}
 		}
@@ -628,7 +649,8 @@ namespace System.Linq
 			{
 				//orderby has some temp allocations, this test is just to make sure those temp allocations don't fail
 				let data = scope List<(int x, int y)>() { (1, 2), (1, 3), (3, 2), (0, 4), (2, 0) };
-				let actual = data.OrderBy((it) => it.x, (l, r) => l - r).OrderBy((it) => it.x, (l, r) => r - l).ToList(.. scope .());
+				let actual = data.OrderBy((it) => it.x, (l, r) => l - r).OrderBy((it) => it.x, (l, r) => r -
+		l).ToList(.. scope .());
 
 				let expected = scope List<(int x, int y)>() { (3, 2), (2, 0), (1, 2), (1, 3), (0, 4)};
 				Test.Assert(actual.SequenceEquals(expected));
@@ -662,15 +684,15 @@ namespace System.Linq
 #endregion
 
 		[AttributeUsage(.Method)]
-		public struct MyTestAttribute : Attribute{
-
+		public struct MyTestAttribute : Attribute
+		{
 		}
 
-		[Reflect(.Methods), AlwaysInclude(IncludeAllMethods=true) ]
+		[Reflect(.Methods), AlwaysInclude(IncludeAllMethods = true)]
 		public struct ReflectionTest
 		{
 			[MyTest, AlwaysInclude, Reflect]
-			public int HelloWorld(){return 1;}
+			public int HelloWorld() { return 1; }
 		}
 
 #region Reported bugs
