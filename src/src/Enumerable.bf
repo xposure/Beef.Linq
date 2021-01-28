@@ -2729,6 +2729,7 @@ namespace System.Linq
 			where TCompare : delegate int(TKey2 lhs, TKey2 rhs)
 			where TOrdered: OrderByEnumerable<TSource, TEnum, TKey, delegate TKey(TSource), delegate int(TKey lhs, TKey rhs)>
 		{
+			//items.ThenBy(keySelect, comparison, false);
 			return .(items.mSorted.GetEnumerator(), keySelect, comparison, false);
 		}
 
