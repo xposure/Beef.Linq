@@ -657,6 +657,27 @@ namespace System.Linq
 			}
 		}
 
+		[Test]
+		public static void SelectMany()
+		{
+			{
+				let data = scope List<List<int>>();
+				for(var i < 10)
+				{
+					data.Add(scope .());
+					for(var k < 10)
+						data.Back().Add(i * 10 + k);
+
+				}	
+
+				/*let data = scope List<(int x, int y)>() { (1, 2), (1, 3), (3, 2), (0, 4), (2, 0) };
+				let actual = data.OrderBy((it) => it.x).ThenBy((it) => it.y).ToList(.. scope .());*/
+
+				/*let expected = scope List<(int x, int y)>() { (0, 4), (1, 2), (1, 3), (2, 0), (3, 2) };
+				Test.Assert(actual.SequenceEquals(expected));*/
+			}
+		}
+
 #region Failures
 #if INCLUDE_FAILURES
 		[Test(ShouldFail = true)]

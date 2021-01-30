@@ -2256,7 +2256,6 @@ namespace System.Linq
 			Concat<TCollection, TCollection2, TSource>(this TCollection items, TCollection2 other)
 			where TCollection : concrete, IEnumerable<TSource>
 			where TCollection2 : concrete, IEnumerable<TSource>
-			where TSource : IHashable
 		{
 			return .(items.GetEnumerator(), other.GetEnumerator());
 		}
@@ -2265,7 +2264,6 @@ namespace System.Linq
 			Concat<TEnum, TCollection2, TSource>(this TEnum items, TCollection2 other)
 			where TEnum : concrete, IEnumerator<TSource>
 			where TCollection2 : concrete, IEnumerable<TSource>
-			where TSource : IHashable
 		{
 			return .(items, other.GetEnumerator());
 		}
@@ -2274,7 +2272,6 @@ namespace System.Linq
 			Concat<TCollection, TEnum, TSource>(this TCollection items, TEnum other)
 			where TCollection : concrete, IEnumerable<TSource>
 			where TEnum : concrete, IEnumerator<TSource>
-			where TSource : IHashable
 		{
 			return .(items.GetEnumerator(), other);
 		}
@@ -2283,7 +2280,6 @@ namespace System.Linq
 			Concat<TEnum, TEnum2, TSource>(this TEnum items, TEnum2 other)
 			where TEnum : concrete, IEnumerator<TSource>
 			where TEnum2 : concrete, IEnumerator<TSource>
-			where TSource : IHashable
 		{
 			return .(items, other);
 		}
@@ -2292,7 +2288,6 @@ namespace System.Linq
 			Append<TCollection, TCollection2, TSource>(this TCollection items, TCollection2 other)
 			where TCollection : concrete, IEnumerable<TSource>
 			where TCollection2 : concrete, IEnumerable<TSource>
-			where TSource : IHashable
 		{
 			return .(items.GetEnumerator(), other.GetEnumerator());
 		}
@@ -2301,7 +2296,6 @@ namespace System.Linq
 			Append<TEnum, TCollection2, TSource>(this TEnum items, TCollection2 other)
 			where TEnum : concrete, IEnumerator<TSource>
 			where TCollection2 : concrete, IEnumerable<TSource>
-			where TSource : IHashable
 		{
 			return .(items, other.GetEnumerator());
 		}
@@ -2310,7 +2304,6 @@ namespace System.Linq
 			Append<TCollection, TEnum, TSource>(this TCollection items, TEnum other)
 			where TCollection : concrete, IEnumerable<TSource>
 			where TEnum : concrete, IEnumerator<TSource>
-			where TSource : IHashable
 		{
 			return .(items.GetEnumerator(), other);
 		}
@@ -2319,7 +2312,6 @@ namespace System.Linq
 			Append<TEnum, TEnum2, TSource>(this TEnum items, TEnum2 other)
 			where TEnum : concrete, IEnumerator<TSource>
 			where TEnum2 : concrete, IEnumerator<TSource>
-			where TSource : IHashable
 		{
 			return .(items, other);
 		}
@@ -2731,6 +2723,108 @@ namespace System.Linq
 		{
 			//items.ThenBy(keySelect, comparison, false);
 			return .(items.mSorted.GetEnumerator(), keySelect, comparison, false);
+		}
+
+		
+		struct SelectManyEnumerable<TSource, TEnum, TSelect, TResult, TEnum2> : IEnumerable<TResult>, IDisposable
+			where TEnum : concrete, IEnumerator<TSource>
+			where TEnum2 : concrete, IEnumerator<TResult>
+			where TSelect: delegate TEnum2(TSource)
+		{
+			Iterator<TEnum, TSource> mItems;
+			Iterator<TEnum2, TResult> mCurrent = default;
+			TSelect mSelect;
+			int mState = -1;
+
+			public this(TEnum firstEnumerator, TSelect select)
+			{
+				mItems = firstEnumerator;
+				mSelect = select;
+			}
+
+			Result<TResult> GetNext(out bool moveNext) mut
+			{
+				if(mState < 1)
+				{
+					if(mState == 0)
+						mCurrent.Dispose();
+
+					if(mItems.mEnum.GetNext() case .Ok(var val))
+					{
+						mCurrent = mSelect(val) ;
+						mState = 1;
+					}
+					else
+					{
+						//no more elements
+						moveNext = false;
+						return .Err;
+					}
+				}
+
+				if(mCurrent.mEnum.GetNext() case .Ok(let val))
+				{
+					moveNext = false;
+					return .Ok(val);
+				}
+
+				//done with current enumerator
+				mState = 0;
+				moveNext = true;
+				return .Err;
+			}
+
+			Result<TResult> GetNext() mut
+			{
+				var moveNext = true;
+				while(moveNext)
+				{
+					let result = GetNext(out moveNext);
+					if(!moveNext)
+						return result;
+				}
+				
+				return .Err;
+			}
+
+			public Enumerator GetEnumerator() => .(this);
+
+			public struct Enumerator:  IEnumerator<TResult>, IDisposable
+			{
+				SelfOuter mSelf;
+
+				public this(SelfOuter self)
+				{
+					mSelf = self;
+				}
+
+				public Result<TResult> GetNext() mut  => mSelf.GetNext();
+
+				public void Dispose() mut => mSelf.Dispose();
+			}
+
+			public void Dispose() mut
+			{
+				mItems.Dispose();
+			}
+		}
+
+		public static SelectManyEnumerable<TSource, decltype(default(TCollection).GetEnumerator()), TSelect, TResult, decltype(default(TCollection2).GetEnumerator())>
+			SelectMany<TCollection, TSource, TCollection2, TSelect, TResult>(this TCollection items, TSelect select)
+			where TCollection : concrete, IEnumerable<TSource>
+			where TCollection2 : concrete, IEnumerable<TResult>
+			where TSelect : delegate TCollection2(TSource)
+		{
+			return .(items.GetEnumerator(), (x) => select(x).GetEnumerator());
+		}
+
+		public static SelectManyEnumerable<TSource, decltype(default(TCollection).GetEnumerator()), TSelect, TResult, TEnum2>
+			SelectMany<TCollection, TSource, TEnum2, TSelect, TResult>(this TCollection items, TSelect select)
+			where TCollection : concrete, IEnumerable<TSource>
+			where TEnum2 : concrete, IEnumerator<TResult>
+			where TSelect : delegate TEnum2(TSource)
+		{
+			return .(items.GetEnumerator(), select);
 		}
 
 		/*struct OfTypeEnumerable<TSource, TEnum, TOf> : Iterator<TEnum, TSource>, IEnumerator<TOf>, IEnumerable<TOf>
