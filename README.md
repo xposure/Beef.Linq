@@ -1,6 +1,50 @@
 # Beef.Linq
 
+# Matching
+ - [x] public static bool All<TSource>(this IEnumerable<TSource> source, Func<TSource, bool> predicate);
+ - [x] public static bool Any<TSource>(this IEnumerable<TSource> source, Func<TSource, bool> predicate);
+ - [x] public static bool Any<TSource>(this IEnumerable<TSource> source);
+ - [x] public static bool Contains<TSource>(this IEnumerable<TSource> source, TSource value);
+ - [x] public static bool SequenceEqual<TSource>(this IEnumerable<TSource> first, IEnumerable<TSource> second);
 
+# Aggregates
+ - [x] public static TResult Average<TSource>(this IEnumerable<TSource> source);
+ - [x] public static TResult Max<TResult>(this IEnumerable<TResult> source);
+ - [x] public static TResult Min<TResult>(this IEnumerable<TResult> source);
+ - [x] public static TResult Sum<TResult>(this IEnumerable<TResult> source);
+ - [x] public static int Count<TSource>(this IEnumerable<TSource> source);
+
+
+# Find in enumerable
+ - [x] public static TSource ElementAt<TSource>(this IEnumerable<TSource> source, int index);
+ - [x] public static TSource ElementAtOrDefault<TSource>(this IEnumerable<TSource> source, int index);
+ - [x] public static TSource First<TSource>(this IEnumerable<TSource> source);
+ - [x] public static TSource FirstOrDefault<TSource>(this IEnumerable<TSource> source);
+ - [x] public static TSource Last<TSource>(this IEnumerable<TSource> source);
+ - [x] public static TSource LastOrDefault<TSource>(this IEnumerable<TSource> source);
+ - [x] public static TSource Single<TSource>(this IEnumerable<TSource> source);
+ - [x] public static TSource SingleOrDefault<TSource>(this IEnumerable<TSource> source);
+
+# Enumerable Chains
+ - [x] public static IEnumerable<int> Range(int start, int count);
+ - [x] public static IEnumerable<TSource> DefaultIfEmpty<TSource>(this IEnumerable<TSource> source);
+ - [x] public static IEnumerable<TSource> DefaultIfEmpty<TSource>(this IEnumerable<TSource> source, TSource defaultValue);
+ - [x] public static IEnumerable<TSource> Distinct<TSource>(this IEnumerable<TSource> source);
+ - [x] public static IEnumerable<TResult> Empty<TResult>();
+ - [x] public static IEnumerable<TResult> Repeat<TResult>(TResult element, int count);
+ - [x] public static IEnumerable<TSource> Reverse<TSource>(this IEnumerable<TSource> source);
+ - [x] public static IEnumerable<TResult> Select<TSource, TResult>(this IEnumerable<TSource> source, Func<TSource, TResult> selector);
+ - [x] public static IEnumerable<TSource> Skip<TSource>(this IEnumerable<TSource> source, int count);
+ - [x] public static IEnumerable<TSource> SkipWhile<TSource>(this IEnumerable<TSource> source, Func<TSource, bool> predicate);
+ - [x] public static IEnumerable<TSource> Take<TSource>(this IEnumerable<TSource> source, int count);
+ - [x] public static IEnumerable<TSource> TakeWhile<TSource>(this IEnumerable<TSource> source, Func<TSource, bool> predicate);
+ - [x] public static IEnumerable<TSource> Where<TSource>(this IEnumerable<TSource> source, Func<TSource, bool> predicate);
+
+# ToXYZ
+ - [x] public static Dictionary<TKey, TSource> ToDictionary<TSource, TKey>(this IEnumerable<TSource> source, Func<TSource, TKey> keySelector);
+ - [x] public static Dictionary<TKey, TElement> ToDictionary<TSource, TKey, TElement>(this IEnumerable<TSource> source, Func<TSource, TKey> keySelector, Func<TSource, TElement> elementSelector);
+ - [x] public static HashSet<TSource> ToHashSet<TSource>(this IEnumerable<TSource> source);
+ - [x] public static List<TSource> ToList<TSource>(this IEnumerable<TSource> source);
 
 
 # Aggregate
