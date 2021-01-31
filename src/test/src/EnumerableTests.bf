@@ -662,11 +662,17 @@ namespace System.Linq
 		{
 			{
 				let data = scope List<List<int>>();
-				for(var i < 10)
+				for(var i < 5)
 				{
 					data.Add(scope .());
-					for(var k < 10)
-						data.Back().Add(i * 10 + k);
+					for(var k < 2)
+						data.Back.Add(i * 2 + k);
+
+					let actual = data.SelectMany((x) => x).ToList(.. scope .());
+					let actual2 = data.SelectMany((x) => x.GetEnumerator()).ToList(.. scope .());
+
+					Test.Assert(actual.SequenceEquals(scope int[](0,1,2,3,4,5,6,7,8,9)));
+					Test.Assert(actual2.SequenceEquals(scope int[](0,1,2,3,4,5,6,7,8,9)));
 
 				}	
 

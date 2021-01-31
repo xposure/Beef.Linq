@@ -2731,15 +2731,18 @@ namespace System.Linq
 			where TEnum2 : concrete, IEnumerator<TResult>
 			where TSelect: delegate TEnum2(TSource)
 		{
+
 			Iterator<TEnum, TSource> mItems;
 			Iterator<TEnum2, TResult> mCurrent = default;
 			TSelect mSelect;
+			bool mDeleteSelect;
 			int mState = -1;
 
-			public this(TEnum firstEnumerator, TSelect select)
+			public this(TEnum firstEnumerator, TSelect select, bool deleteSelect)
 			{
 				mItems = firstEnumerator;
 				mSelect = select;
+				mDeleteSelect = deleteSelect;
 			}
 
 			Result<TResult> GetNext(out bool moveNext) mut
@@ -2751,7 +2754,7 @@ namespace System.Linq
 
 					if(mItems.mEnum.GetNext() case .Ok(var val))
 					{
-						mCurrent = mSelect(val) ;
+						mCurrent = mSelect(val);
 						mState = 1;
 					}
 					else
@@ -2806,16 +2809,18 @@ namespace System.Linq
 			public void Dispose() mut
 			{
 				mItems.Dispose();
+				if(mDeleteSelect)
+					DeleteAndNullify!(mSelect);
 			}
 		}
 
-		public static SelectManyEnumerable<TSource, decltype(default(TCollection).GetEnumerator()), TSelect, TResult, decltype(default(TCollection2).GetEnumerator())>
+		public static SelectManyEnumerable<TSource, decltype(default(TCollection).GetEnumerator()), delegate  decltype(default(TCollection2).GetEnumerator())(TSource), TResult, decltype(default(TCollection2).GetEnumerator())>
 			SelectMany<TCollection, TSource, TCollection2, TSelect, TResult>(this TCollection items, TSelect select)
 			where TCollection : concrete, IEnumerable<TSource>
 			where TCollection2 : concrete, IEnumerable<TResult>
 			where TSelect : delegate TCollection2(TSource)
 		{
-			return .(items.GetEnumerator(), (x) => select(x).GetEnumerator());
+			return .(items.GetEnumerator(), new (x) => select(x).GetEnumerator(), true);
 		}
 
 		public static SelectManyEnumerable<TSource, decltype(default(TCollection).GetEnumerator()), TSelect, TResult, TEnum2>
@@ -2824,7 +2829,7 @@ namespace System.Linq
 			where TEnum2 : concrete, IEnumerator<TResult>
 			where TSelect : delegate TEnum2(TSource)
 		{
-			return .(items.GetEnumerator(), select);
+			return .(items.GetEnumerator(), select, false);
 		}
 
 		/*struct OfTypeEnumerable<TSource, TEnum, TOf> : Iterator<TEnum, TSource>, IEnumerator<TOf>, IEnumerable<TOf>
