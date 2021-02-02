@@ -2610,7 +2610,7 @@ namespace System.Linq
 				mSorted.Dispose();
 			}
 
-			/*public SubSortEnumerable<decltype(default(sortedEnumerable).GetEnumerator()), TSource, TKey, TKey2, TKeyDlg2, TCompare2>
+			public SubSortEnumerable<decltype(default(sortedEnumerable).GetEnumerator()), TSource, TKey, TKey2, TKeyDlg2, TCompare2>
 				ThenBy<TKey2, TKeyDlg2, TCompare2>(TKeyDlg2 key, TCompare2 compare)
 				//where TEnum2 : concrete, IEnumerator<(TKey key, TSource value)>
 				where TKeyDlg2 : delegate TKey2(TSource)
@@ -2625,7 +2625,7 @@ namespace System.Linq
 				where int : operator TKey2 <=> TKey2
 			{
 				return .(mSorted.GetEnumerator(), key, OrderByComparison<TKey2>.Comparison, false);
-			}*/
+			}
 		}
 
 		public static OrderByEnumerable<TSource, decltype(default(TCollection).GetEnumerator()), TKey, TKeyDlg, delegate int(TKey lhs, TKey rhs)>
@@ -2700,7 +2700,7 @@ namespace System.Linq
 			return .(items, keySelect, comparison, true);
 		}
 
-		/*struct ThenByEnumerable<TSource, TEnum, TKey, TSubKey, TKeyDlg, TCompare> :  IEnumerable<TSource>, IDisposable
+		struct ThenByEnumerable<TSource, TEnum, TKey, TSubKey, TKeyDlg, TCompare> :  IEnumerable<TSource>, IDisposable
 			where TEnum : concrete, IEnumerator<(TKey key, TSource value)>//, IDisposable
 			where TKeyDlg : delegate TSubKey(TSource)
 			where TCompare : delegate int(TSubKey lhs, TSubKey rhs)
@@ -2716,7 +2716,7 @@ namespace System.Linq
 			Result<TSource> GetNext() mut
 			{
 				if (mSorted.GetNext() case .Ok(let val))
-					return .Ok(val.value);
+					return .Ok(val);
 
 				return .Err;
 			}
@@ -2750,9 +2750,8 @@ namespace System.Linq
 				return .(mSorted.GetEnumerator(), key, compare, descending);
 			}*/
 
-			internal SubSortEnumerable<decltype(default(sortedEnumerable).GetEnumerator()), TSource, TSubKey, TKey2, TKeyDlg2, TCompare2>
-				ThenBy<TEnum2, TKey2, TKeyDlg2, TCompare2>(TKeyDlg2 key, TCompare2 compare, bool descending)
-				where TEnum2 : concrete, IEnumerator<(TKey key, TSource value)>
+			/*internal SubSortEnumerable<decltype(default(sortedEnumerable).GetEnumerator()), TSource, TSubKey, TKey2, TKeyDlg2, TCompare2>
+				ThenBy< TKey2, TKeyDlg2, TCompare2>(TKeyDlg2 key, TCompare2 compare, bool descending)
 				where TKeyDlg2 : delegate TKey2(TSource)
 				where TCompare2 : delegate int(TKey2 lhs, TKey2 rhs)
 			{
@@ -2760,16 +2759,15 @@ namespace System.Linq
 			}
 
 			internal SubSortEnumerable<decltype(default(sortedEnumerable).GetEnumerator()), TSource, TSubKey, TKey2, TKeyDlg2, delegate int(TKey2 lhs, TKey2 rhs)>
-				ThenBy<TEnum2, TKey2, TKeyDlg2>(TKeyDlg2 key)
-				where TEnum2 : concrete, IEnumerator<(TKey key, TSource value)>
+				ThenBy< TKey2, TKeyDlg2>(TKeyDlg2 key)
 				where TKeyDlg2 : delegate TKey2(TSource)
 				where int : operator TKey2 <=> TKey2
 			{
 				return .(mSorted.GetEnumerator(), key, OrderByComparison<TKey2>.Comparison, false);
-			}
-		}*/
+			}*/
+		}
 
-		/*public static ThenByEnumerable<TSource, decltype(default(SortedEnumerable<TSource, TEnum, TKey, delegate TKey(TSource), delegate int(TKey lhs, TKey rhs)>).GetEnumerator()), TKey, TKey2, TKeyDlg, TCompare>
+		public static ThenByEnumerable<TSource, decltype(default(SortedEnumerable<TSource, TEnum, TKey, delegate TKey(TSource), delegate int(TKey lhs, TKey rhs)>).GetEnumerator()), TKey, TKey2, TKeyDlg, TCompare>
 			ThenBy<TSource, TEnum, TEnum2, TOrdered, TKey, TKey2, TKeyDlg, TCompare>(this TOrdered items, TKeyDlg keySelect, TCompare comparison)
 			where TEnum : concrete, IEnumerator<TSource>
 			where TKeyDlg : delegate TKey2(TSource)
@@ -2778,7 +2776,7 @@ namespace System.Linq
 		{
 			//items.ThenBy(keySelect, comparison, false);
 			return .(items.mSorted.GetEnumerator(), keySelect, comparison, false);
-		}*/
+		}
 
 		struct SelectManyEnumerable<TSource, TEnum, TSelect, TResult, TEnum2> : IEnumerable<TResult>, IDisposable
 			where TEnum : concrete, IEnumerator<TSource>
