@@ -816,13 +816,13 @@ namespace System.Linq
 				}
 				public Result<TSource> GetNext() mut => mSelf.GetNext();
 
-				public void Dispose()
+				public void Dispose() mut
 				{
 					mSelf.Dispose();
 				}
 			}
 
-			public void Dispose()
+			public void Dispose() mut
 			{
 				mIterator.Dispose();
 			}

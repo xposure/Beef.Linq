@@ -738,12 +738,12 @@ namespace System.Linq
 
 #region Reported bugs
 
-		[Test]
+		/*[Test]
 		public static void HitGetMethodsReflectionIssue()
 		{
 			let actual = typeof(ReflectionTest).GetMethods().Where((m) => m.GetCustomAttribute<MyTestAttribute>() case .Ok).ToList(.. scope .());
 			Test.Assert(actual.Count == 1);
-		}
+		}*/
 
 		[Test]
 		public static void HigCallingMutatingIssue()
