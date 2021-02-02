@@ -477,12 +477,12 @@ namespace System.Linq
 			return InternalGroupBy(groupByMemory, items, key);
 		}*/
 
-		/*[Test]
+		[Test]
 		public static void GroupBy()
 		{
 			{
-				let data = scope List<(int x, int y, int z)>() { (0, 1, 9), (0, 2, 8), (2, 4, 5), (1, 1, 1), (2, 2, 2)
-		}; let actual = data.GroupBy((key) => key.x, scope .()).ToList(.. scope .());
+				let data = scope List<(int x, int y, int z)>() { (0, 1, 9), (0, 2, 8), (2, 4, 5), (1, 1, 1), (2, 2, 2) };
+				let actual = data.GroupBy((key) => key.x, scope .()).ToList(.. scope .());
 
 				Test.Assert(actual.Count == 3);
 
@@ -491,15 +491,32 @@ namespace System.Linq
 				{
 					switch (it.Key)
 					{
-					case 0: Test.Assert(it.SequenceEquals(scope List<(int x, int y, int z)>() { (0, 1, 9), (0, 2, 8)}));
-		i |= 1; case 1: Test.Assert(it.SequenceEquals(scope List<(int x, int y, int z)>() { (1, 1, 1) })); i |= 2; case
-		2: Test.Assert(it.SequenceEquals(scope List<(int x, int y, int z)>() { (2, 4, 5), (2, 2, 2) })); i |= 4;
+					case 0: Test.Assert(it.SequenceEquals(scope List<(int x, int y, int z)>() { (0, 1, 9), (0, 2, 8) })); i |= 1;
+					case 1: Test.Assert(it.SequenceEquals(scope List<(int x, int y, int z)>() { (1, 1, 1) })); i |= 2;
+					case 2: Test.Assert(it.SequenceEquals(scope List<(int x, int y, int z)>() { (2, 4, 5), (2, 2, 2) })); i |= 4;
 					}
 				}
 
 				Test.Assert(i == 7);
 			}
-		}*/
+
+			{
+				let data = scope List<(int x, int y, int z)>() { (0, 1, 9), (0, 2, 8), (2, 4, 5), (1, 1, 1), (2, 2, 2) };
+
+				var i = 0;
+				for (var it in  data.GroupBy((key) => key.x))
+				{
+					switch (it.Key)
+					{
+					case 0: Test.Assert(it.SequenceEquals(scope List<(int x, int y, int z)>() { (0, 1, 9), (0, 2, 8) })); i |= 1;
+					case 1: Test.Assert(it.SequenceEquals(scope List<(int x, int y, int z)>() { (1, 1, 1) })); i |= 2;
+					case 2: Test.Assert(it.SequenceEquals(scope List<(int x, int y, int z)>() { (2, 4, 5), (2, 2, 2) })); i |= 4;
+					}
+				}
+
+				Test.Assert(i == 7);
+			}
+		}
 
 #endregion
 
@@ -659,13 +676,14 @@ namespace System.Linq
 		public static void SelectMany()
 		{
 			{
-				let data = scope List<List<int>>(){
-					scope List<int>(),
-					scope List<int>(),
-					scope List<int>(),
-					scope List<int>(),
-					scope List<int>()
-				};
+				let data = scope List<List<int>>()
+					{
+						scope List<int>(),
+						scope List<int>(),
+						scope List<int>(),
+						scope List<int>(),
+						scope List<int>()
+					};
 
 				for (var i < 5)
 					for (var k < 2)
