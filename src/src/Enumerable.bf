@@ -2725,24 +2725,22 @@ namespace System.Linq
 			return .(items.mSorted.GetEnumerator(), keySelect, comparison, false);
 		}
 
-		
 		struct SelectManyEnumerable<TSource, TEnum, TSelect, TResult, TEnum2> : IEnumerable<TResult>, IDisposable
 			where TEnum : concrete, IEnumerator<TSource>
 			where TEnum2 : concrete, IEnumerator<TResult>
 			where TSelect: delegate TEnum2(TSource)
 		{
+			public readonly static String SelectManyEnum = new String() ~ delete _;
 
 			Iterator<TEnum, TSource> mItems;
 			Iterator<TEnum2, TResult> mCurrent = default;
 			TSelect mSelect;
-			bool mDeleteSelect;
 			int mState = -1;
 
-			public this(TEnum firstEnumerator, TSelect select, bool deleteSelect)
+			public this(TEnum firstEnumerator, TSelect select)
 			{
 				mItems = firstEnumerator;
 				mSelect = select;
-				mDeleteSelect = deleteSelect;
 			}
 
 			Result<TResult> GetNext(out bool moveNext) mut
@@ -2809,8 +2807,16 @@ namespace System.Linq
 			public void Dispose() mut
 			{
 				mItems.Dispose();
-				if(mDeleteSelect)
-					DeleteAndNullify!(mSelect);
+			}
+		}
+
+		extension SelectManyEnumerable<TSource, TEnum, TSelect, TResult, TEnum2> 
+			where TSelect: Object
+		{
+			public void Dispose() mut
+			{
+				base.Dispose();
+				DeleteAndNullify!(mSelect);
 			}
 		}
 
@@ -2820,7 +2826,7 @@ namespace System.Linq
 			where TCollection2 : concrete, IEnumerable<TResult>
 			where TSelect : delegate TCollection2(TSource)
 		{
-			return .(items.GetEnumerator(), new (x) => select(x).GetEnumerator(), true);
+			return .(items.GetEnumerator(), new (x) => select(x).GetEnumerator());
 		}
 
 		public static SelectManyEnumerable<TSource, decltype(default(TCollection).GetEnumerator()), TSelect, TResult, TEnum2>
@@ -2829,7 +2835,7 @@ namespace System.Linq
 			where TEnum2 : concrete, IEnumerator<TResult>
 			where TSelect : delegate TEnum2(TSource)
 		{
-			return .(items.GetEnumerator(), select, false);
+			return .(items.GetEnumerator(), select);
 		}
 
 		/*struct OfTypeEnumerable<TSource, TEnum, TOf> : Iterator<TEnum, TSource>, IEnumerator<TOf>, IEnumerable<TOf>

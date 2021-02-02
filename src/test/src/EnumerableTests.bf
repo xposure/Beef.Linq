@@ -117,7 +117,6 @@ namespace System.Linq
 				actual = data.Max();
 				Test.Assert(actual == 3);
 			}
-
 			{
 				let data = scope List<int>();
 
@@ -639,7 +638,6 @@ namespace System.Linq
 				/*let expected = scope List<(int x, int y)>() { (0, 4), (1, 2), (1, 3), (2, 0), (3, 2) };
 				Test.Assert(actual.SequenceEquals(expected));*/
 			}
-
 			{
 				let data = scope List<(int x, int y)>() { (1, 2), (1, 3), (3, 2), (0, 4), (2, 0) };
 				let actual = data.OrderBy((it) => it.x, (l, r) => l - r).ToList(.. scope .());
@@ -652,7 +650,7 @@ namespace System.Linq
 				let data = scope List<(int x, int y)>() { (1, 2), (1, 3), (3, 2), (0, 4), (2, 0) };
 				let actual = data.OrderBy((it) => it.x, (l, r) => l - r).OrderBy((it) => it.x, (l, r) => r - l).ToList(.. scope .());
 
-				let expected = scope List<(int x, int y)>() { (3, 2), (2, 0), (1, 2), (1, 3), (0, 4)};
+				let expected = scope List<(int x, int y)>() { (3, 2), (2, 0), (1, 2), (1, 3), (0, 4) };
 				Test.Assert(actual.SequenceEquals(expected));
 			}
 		}
@@ -661,26 +659,23 @@ namespace System.Linq
 		public static void SelectMany()
 		{
 			{
-				let data = scope List<List<int>>();
-				for(var i < 5)
-				{
-					data.Add(scope .());
-					for(var k < 2)
-						data.Back.Add(i * 2 + k);
+				let data = scope List<List<int>>(){
+					scope List<int>(),
+					scope List<int>(),
+					scope List<int>(),
+					scope List<int>(),
+					scope List<int>()
+				};
 
-					let actual = data.SelectMany((x) => x).ToList(.. scope .());
-					let actual2 = data.SelectMany((x) => x.GetEnumerator()).ToList(.. scope .());
+				for (var i < 5)
+					for (var k < 2)
+						data[i].Add(i * 2 + k);
 
-					Test.Assert(actual.SequenceEquals(scope int[](0,1,2,3,4,5,6,7,8,9)));
-					Test.Assert(actual2.SequenceEquals(scope int[](0,1,2,3,4,5,6,7,8,9)));
+				let actual = data.SelectMany((x) => x).ToList(.. scope .());
+				let actual2 = data.SelectMany((x) => x.GetEnumerator()).ToList(.. scope .());
 
-				}	
-
-				/*let data = scope List<(int x, int y)>() { (1, 2), (1, 3), (3, 2), (0, 4), (2, 0) };
-				let actual = data.OrderBy((it) => it.x).ThenBy((it) => it.y).ToList(.. scope .());*/
-
-				/*let expected = scope List<(int x, int y)>() { (0, 4), (1, 2), (1, 3), (2, 0), (3, 2) };
-				Test.Assert(actual.SequenceEquals(expected));*/
+				Test.Assert(actual.SequenceEquals(scope int[](0, 1, 2, 3, 4, 5, 6, 7, 8, 9)));
+				Test.Assert(actual2.SequenceEquals(scope int[](0, 1, 2, 3, 4, 5, 6, 7, 8, 9)));
 			}
 		}
 
