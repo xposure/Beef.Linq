@@ -24,7 +24,6 @@
 
 :heavy_check_mark: `public static int Count<TSource>(this IEnumerable<TSource> source);`
 
-
 # Find in enumerable
 
 :heavy_check_mark: `public static TSource ElementAt<TSource>(this IEnumerable<TSource> source, int index);`
@@ -81,7 +80,6 @@
 
 :heavy_check_mark: `public static List<TSource> ToList<TSource>(this IEnumerable<TSource> source);`
 
-
 # Aggregate
 
 :heavy_check_mark: `public static TSource Aggregate<TSource>(this IEnumerable<TSource> source, Func<TSource, TSource, TSource> func);`
@@ -92,7 +90,7 @@
 
 # GroupBy
 
-:x: `public static IEnumerable<IGrouping<TKey, TSource>> GroupBy<TSource, TKey>(this IEnumerable<TSource> source, Func<TSource, TKey> keySelector);`
+:heavy_check_mark: `public static IEnumerable<IGrouping<TKey, TSource>> GroupBy<TSource, TKey>(this IEnumerable<TSource> source, Func<TSource, TKey> keySelector);`
 
 :x: `public static IEnumerable<TResult> GroupBy<TSource, TKey, TResult>(this IEnumerable<TSource> source, Func<TSource, TKey> keySelector, Func<TKey, IEnumerable<TSource>, TResult> resultSelector);`
 
@@ -105,7 +103,7 @@
 # Intersect
 
 :heavy_check_mark: `public static IEnumerable<TSource> Intersect<TSource>(this IEnumerable<TSource> first, IEnumerable<TSource> second);`
- 
+
 # Join
 
 :x: `public static IEnumerable<TResult> Join<TOuter, TInner, TKey, TResult>(this IEnumerable<TOuter> outer, IEnumerable<TInner> inner, Func<TOuter, TKey> outerKeySelector, Func<TInner, TKey> innerKeySelector, Func<TOuter, TInner, TResult> resultSelector);`
@@ -124,7 +122,7 @@
 
 :x: `public static IEnumerable<TResult> SelectMany<TSource, TCollection, TResult>(this IEnumerable<TSource> source, Func<TSource, IEnumerable<TCollection>> collectionSelector, Func<TSource, TCollection, TResult> resultSelector);`
 
-:x: `public static IEnumerable<TResult> SelectMany<TSource, TResult>(this IEnumerable<TSource> source, Func<TSource, IEnumerable<TResult>> selector);`
+:heavy_check_mark: `public static IEnumerable<TResult> SelectMany<TSource, TResult>(this IEnumerable<TSource> source, Func<TSource, IEnumerable<TResult>> selector);`
 
 # ThenBy
 
@@ -155,4 +153,3 @@
 :heavy_check_mark: `public static IEnumerable<TSource> Except<TSource>(this IEnumerable<TSource> first, IEnumerable<TSource> second);`
 
 :heavy_check_mark: `public static IEnumerable<TResult> Zip<TFirst, TSecond, TResult>(this IEnumerable<TFirst> first, IEnumerable<TSecond> second, Func<TFirst, TSecond, TResult> resultSelector);`
-
