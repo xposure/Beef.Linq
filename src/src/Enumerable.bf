@@ -2459,7 +2459,7 @@ namespace System.Linq
 			}
 		}
 
-		struct SubSortEnumerable<TEnum2, TSource, TKey, TKey2, TKeyDlg2, TCompare2> : IEnumerator<(TKey2 key, TSource value)>, IEnumerable<(TKey2 key, TSource value)>, IDisposable
+		struct SubSortEnumerable<TEnum2, TSource, TKey, TKey2, TKeyDlg2, TCompare2> : IEnumerable<TSource>, IDisposable
 			where TEnum2 : concrete, IEnumerator<(TKey key, TSource value)>//, IDisposable
 			where TKeyDlg2 : delegate TKey2(TSource)
 			where TCompare2 : delegate int(TKey2 lhs, TKey2 rhs)
@@ -2486,7 +2486,7 @@ namespace System.Linq
 				mIndex = -1;
 			}
 
-			public Result<(TKey2 key, TSource value)> GetNext() mut
+			Result<TSource> GetNext() mut
 			{
 				if (mIndex == -1)
 				{
@@ -2524,18 +2524,29 @@ namespace System.Linq
 					if ((mFlags & 1) == 1)
 					{
 						if (mIndex > 0)
-							return .Ok(mOrderedList[--mIndex]);
+							return .Ok(mOrderedList[--mIndex].value);
 					}
 					else if (mIndex < mCount)
-						return .Ok(mOrderedList[mIndex++]);
+						return .Ok(mOrderedList[mIndex++].value);
 				}
 
 				return .Err;
 			}
 
-			public Self GetEnumerator()
+			public Enumerator GetEnumerator() => .(this);
+
+			public struct Enumerator : IEnumerator<TSource>, IDisposable
 			{
-				return this;
+				SelfOuter mSelf;
+
+				public this(SelfOuter self)
+				{
+					mSelf = self;
+				}
+
+				public Result<TSource> GetNext() mut => mSelf.GetNext();
+
+				public void Dispose() mut => mSelf.Dispose();
 			}
 
 			public void Dispose() mut
@@ -2588,8 +2599,8 @@ namespace System.Linq
 			}
 
 			public SubSortEnumerable<decltype(default(sortedEnumerable).GetEnumerator()), TSource, TKey, TKey2, TKeyDlg2, TCompare2>
-				ThenBy<TEnum2, TKey2, TKeyDlg2, TCompare2>(TKeyDlg2 key, TCompare2 compare)
-				where TEnum2 : concrete, IEnumerator<(TKey key, TSource value)>
+				ThenBy<TKey2, TKeyDlg2, TCompare2>(TKeyDlg2 key, TCompare2 compare)
+				//where TEnum2 : concrete, IEnumerator<(TKey key, TSource value)>
 				where TKeyDlg2 : delegate TKey2(TSource)
 				where TCompare2 : delegate int(TKey2 lhs, TKey2 rhs)
 			{
@@ -2597,8 +2608,7 @@ namespace System.Linq
 			}
 
 			public SubSortEnumerable<decltype(default(sortedEnumerable).GetEnumerator()), TSource, TKey, TKey2, TKeyDlg2, delegate int(TKey2 lhs, TKey2 rhs)>
-				ThenBy<TEnum2, TKey2, TKeyDlg2>(TKeyDlg2 key)
-				where TEnum2 : concrete, IEnumerator<(TKey key, TSource value)>
+				ThenBy<TKey2, TKeyDlg2>(TKeyDlg2 key)
 				where TKeyDlg2 : delegate TKey2(TSource)
 				where int : operator TKey2 <=> TKey2
 			{
