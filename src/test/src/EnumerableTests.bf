@@ -645,7 +645,7 @@ namespace System.Linq
 			}
 		}
 
-		[Test]
+		/*[Test]
 		public static void ThenBy()
 		{
 			{
@@ -671,7 +671,7 @@ namespace System.Linq
 				let expected = scope List<(int x, int y)>() { (3, 2), (2, 0), (1, 2), (1, 3), (0, 4) };
 				Test.Assert(actual.SequenceEquals(expected));
 			}
-		}
+		}*/
 
 		[Test]
 		public static void SelectMany()
@@ -748,10 +748,10 @@ namespace System.Linq
 		[Test]
 		public static void HigCallingMutatingIssue()
 		{
-			/*int[] test1 = scope .(10, 11, 10, 12, 13, 14, -1);
+			int[] test1 = scope .(10, 11, 10, 12, 13, 14, -1);
 			let actual = test1.Reverse().Where((x) => x > 0 && x % 2 == 0).Sum();
 
-			Test.Assert(actual == 46);*/
+			Test.Assert(actual == 46);
 		}
 #endregion
 	}
