@@ -2486,7 +2486,7 @@ namespace System.Linq
 				mIndex = -1;
 			}
 
-			Result<TSource> GetNext() mut
+			internal Result<TSource> GetNext() mut
 			{
 				if (mIndex == -1)
 				{
@@ -2688,7 +2688,7 @@ namespace System.Linq
 			return .(items, keySelect, comparison, true);
 		}
 
-		struct ThenByEnumerable<TSource, TEnum, TKey, TSubKey, TKeyDlg, TCompare> : IEnumerator<TSource>, IEnumerable<TSource>, IDisposable
+		struct ThenByEnumerable<TSource, TEnum, TKey, TSubKey, TKeyDlg, TCompare> :  IEnumerable<TSource>, IDisposable
 			where TEnum : concrete, IEnumerator<(TKey key, TSource value)>//, IDisposable
 			where TKeyDlg : delegate TSubKey(TSource)
 			where TCompare : delegate int(TSubKey lhs, TSubKey rhs)
@@ -2701,7 +2701,7 @@ namespace System.Linq
 				mSorted = .(enumerator, key, compare, descending);
 			}
 
-			public Result<TSource> GetNext() mut
+			Result<TSource> GetNext() mut
 			{
 				if (mSorted.GetNext() case .Ok(let val))
 					return .Ok(val.value);
