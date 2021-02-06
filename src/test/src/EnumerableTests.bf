@@ -593,7 +593,6 @@ namespace System.Linq
 		[Test]
 		public static void OrderBy()
 		{
-#if false
 			{
 				let data = scope List<(int x, int y)>() { (1, 2), (1, 3), (3, 2), (0, 4), (2, 0) };
 				let actual = data.OrderBy((it) => it.x).ToList(.. scope .());
@@ -616,15 +615,6 @@ namespace System.Linq
 				let expected = scope List<(int x, int y)>() { (3, 2), (2, 0), (1, 2), (1, 3), (0, 4) };
 				Test.Assert(actual.SequenceEquals(expected));
 			}
-#endif
-			{
-
-				let data = scope List<(int x, int y)>() { (1, 2), (1, 3), (3, 2), (0, 4), (2, 0) };
-				data.Sort(scope (lhs, rhs) => rhs.x - lhs.y);
-				for(var it in data)
-					Console.WriteLine(it);
-
-			}
 		}
 
 		[Test]
@@ -635,14 +625,14 @@ namespace System.Linq
 				let data = scope List<(int x, int y)>() { (1, 2), (1, 3), (3, 2), (0, 4), (2, 0) };
 				let actual = data.OrderByDescending((it) => it.x).ToList(.. scope .());
 
-				let expected = scope List<(int x, int y)>() { (0, 4), (1, 2), (1, 3), (2, 0), (3, 2) };
+				let expected = scope List<(int x, int y)>() { (0, 4), (1, 3), (1, 2), (2, 0), (3, 2) };
 				Test.Assert(actual.SequenceEquals(expected.Reverse()));
 			}
 			{
 				let data = scope List<(int x, int y)>() { (1, 2), (1, 3), (3, 2), (0, 4), (2, 0) };
 				let actual = data.OrderByDescending((it) => it.x, (l, r) => l - r).ToList(.. scope .());
 
-				let expected = scope List<(int x, int y)>() { (0, 4), (1, 2), (1, 3), (2, 0), (3, 2) };
+				let expected = scope List<(int x, int y)>() { (0, 4), (1, 3), (1, 2), (2, 0), (3, 2) };
 				Test.Assert(actual.SequenceEquals(expected.Reverse()));
 			}
 			{
@@ -650,10 +640,11 @@ namespace System.Linq
 				let data = scope List<(int x, int y)>() { (1, 2), (1, 3), (3, 2), (0, 4), (2, 0) };
 				let actual = data.OrderByDescending((it) => it.x, (l, r) => l - r).OrderBy((it) => it.x, (l, r) => r - l).ToList(.. scope .());
 
-				let expected = scope List<(int x, int y)>() { (3, 2), (2, 0), (1, 3), (1, 2), (0, 4) };
+				let expected = scope List<(int x, int y)>() { (3, 2), (2, 0), (1, 2), (1, 3), (0, 4) };
 				Test.Assert(actual.SequenceEquals(expected));
 			}
 		}
+
 #if false
 		[Test]
 		public static void ThenBy()
