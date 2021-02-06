@@ -2510,7 +2510,7 @@ namespace System.Linq
 						for(var it in mCompares)
 						{
 							var sub = cmp;
-							cmp = scope (l, r) =>
+							cmp = scope:: (l, r) =>
 							{
 								let c = sub(l, r);
 								if(c == 0)
