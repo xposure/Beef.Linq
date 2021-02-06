@@ -2619,6 +2619,28 @@ namespace System.Linq
 				add.descending = false;
 				return this;
 			}
+
+			
+			public Self ThenByDescending<TKey2, TKeyDlg2, TCompare2>(TKeyDlg2 keySelect, TCompare2 comparison) mut
+				where TKeyDlg2 : delegate TKey2(TSource)
+				where TCompare2 : delegate int(TKey2 lhs, TKey2 rhs)
+			{
+				var add = mCompares.GrowUnitialized(1);
+				add.comparer = new (l, r) => comparison(keySelect(l), keySelect(r));
+				add.descending = true;
+				return this;
+			}
+
+			public Self ThenByDescending<TKey2, TKeyDlg2>(TKeyDlg2 keySelect) 
+				where TKeyDlg2 : delegate TKey2(TSource)
+				where int : operator TKey2 <=> TKey2
+			{
+				let comparison = OrderByComparison<TKey2>.Comparison;
+				var add = mCompares.GrowUnitialized(1);
+				add.comparer = new (l, r) => comparison(keySelect(l), keySelect(r));
+				add.descending = true;
+				return this;
+			}
 		}
 
 		public static OrderByEnumerable<TSource, decltype(default(TCollection).GetEnumerator())>
