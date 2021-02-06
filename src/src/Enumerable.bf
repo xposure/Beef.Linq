@@ -2484,7 +2484,6 @@ namespace System.Linq
 			struct Comparer
 			{
 				public TCompare comparer;
-				public Comparer* next;
 				public bool descending;
 			}
 
@@ -2492,16 +2491,17 @@ namespace System.Linq
 			int[] mMap;
 			//List<TSource> mOrderedList;
 			List<Comparer> mCompares = default;
-			Comparer mCompare;
 			Iterator<TEnum, TSource> mIterator;
 			int mIndex;
 
 			public this(TEnum enumerator, TCompare compare, bool descending)
 			{
+				mCompares = new .();
+				var add = mCompares.GrowUnitialized(1);
+				add.comparer = compare;
+				add.descending = descending;
+
 				mValues = ?;
-				mCompare.comparer = compare;
-				mCompare.next = null;
-				mCompare.descending = descending;
 				mMap = null;
 				mIterator = enumerator;
 				mIndex = -1;
@@ -2511,14 +2511,13 @@ namespace System.Linq
 				var left;
 				var right;
 #unwarn
-				var cmp = &mCompare;
 			    repeat {
 			        int i = left;
 			        int j = right;
 			        int x = mMap[i + ((j - i) >> 1)];
 			        repeat {
-			            while (i < mMap.Count && CompareKeys(cmp, x, mMap[i]) > 0) i++;
-			            while (j >= 0 && CompareKeys(cmp, x, mMap[j]) < 0) j--;
+			            while (i < mMap.Count && CompareKeys(x, mMap[i]) > 0) i++;
+			            while (j >= 0 && CompareKeys(x, mMap[j]) < 0) j--;
 			            if (i > j) break;
 			            if (i < j) {
 			                int temp = mMap[i];
@@ -2539,14 +2538,17 @@ namespace System.Linq
 			    } while (left < right);
 			}
 
-			int CompareKeys(Comparer* cmp, int index1, int index2)
+			[Inline]
+			int CompareKeys(int index1, int index2)
 			{
-			    int c = cmp.comparer(mValues[index1], mValues[index2]);
-			    if (c == 0) {
-			        if (cmp.next == null) return index1 - index2;
-			        return CompareKeys(cmp.next, index1, index2);
-			    }
-			    return cmp.descending ? -c : c;
+				for(var cmp in ref mCompares)
+				{
+					int c = cmp.comparer(mValues[index1], mValues[index2]);
+					if (c != 0)
+						return cmp.descending ? -c : c;
+				}
+
+				return index1 - index2;
 			}
 
 			Result<TSource> GetNext() mut
@@ -2590,208 +2592,34 @@ namespace System.Linq
 			{
 				mIterator.Dispose();
 
-				if(mCompares != null)
-				{
-					delete mCompare.comparer;
-					for(var it in mCompares)
-						delete it.comparer;
-					DeleteAndNullify!(mCompares);
-				}
-
-				delete mCompare.comparer;
-
+				for(var it in mCompares)
+					delete it.comparer;
+				DeleteAndNullify!(mCompares);
 				DeleteAndNullify!(mMap);
 				mValues.Dispose();
 			}
 
-			/*public Self ThenBy<TKey2, TKeyDlg2, TCompare2>(TKeyDlg2 key, TCompare2 compare) mut
-				//where TEnum2 : concrete, IEnumerator<(TKey key, TSource value)>
+			public Self ThenBy<TKey2, TKeyDlg2, TCompare2>(TKeyDlg2 keySelect, TCompare2 comparison) mut
 				where TKeyDlg2 : delegate TKey2(TSource)
 				where TCompare2 : delegate int(TKey2 lhs, TKey2 rhs)
 			{
-				if(mCompares == null)
-					mCompares = new .();
-				mCompares.Add((key, compare, false));
+				var add = mCompares.GrowUnitialized(1);
+				add.comparer = new (l, r) => comparison(keySelect(l), keySelect(r));
+				add.descending = false;
 				return this;
 			}
 
-			public SubSortEnumerable<decltype(default(sortedEnumerable).GetEnumerator()), TSource, TKey, TKey2, TKeyDlg2, delegate int(TKey2 lhs, TKey2 rhs)>
-				ThenBy<TKey2, TKeyDlg2>(TKeyDlg2 key)
+			public Self ThenBy<TKey2, TKeyDlg2>(TKeyDlg2 keySelect) 
 				where TKeyDlg2 : delegate TKey2(TSource)
 				where int : operator TKey2 <=> TKey2
 			{
-				return .(mSorted.GetEnumerator(), key, OrderByComparison<TKey2>.Comparison, false);
-			}*/
-		}
-#if false
-		struct OrderByEnumerable<TSource, TEnum, TKey, TKeyDlg, TCompare> : IEnumerable<TSource>, IDisposable
-			where TEnum : concrete, IEnumerator<TSource>
-			where TKeyDlg : delegate TKey(TSource)
-			where TCompare : delegate int(TKey lhs, TKey rhs)
-		{
-			typealias CMP = (TKeyDlg key, TCompare comparer, bool descending);
-			List<TSource> mOrderedList;
-			List<CMP> mCompares = default;
-			CMP mCompare;
-			Iterator<TEnum, TSource> mIterator;
-
-			int mCount = 0;
-			int mIndex;
-
-			public this(TEnum enumerator, TKeyDlg key, TCompare compare, bool descending)
-			{
-				mIterator =enumerator;
-				mOrderedList = new .();
-				mCompare = (key, compare, descending);
-				mIndex = -1;
-			}
-
-			Result<TSource> GetNext() mut
-			{
-				if (mIndex == -1)
-				{
-					while (mIterator.mEnum.GetNext() case .Ok(let val))
-						mOrderedList.Add(val);
-
-					Comparison<TSource> cmp =
-						mCompare.descending ?
-						(scope (l, r) => -mCompare.comparer(mCompare.key(l), mCompare.key(r))):
-						(scope (l, r) => mCompare.comparer(mCompare.key(l), mCompare.key(r)));
-
-					if(mCompares != null)
-					{
-						for(var it in mCompares)
-						{
-							var sub = cmp;
-							cmp = scope:: (l, r) =>
-							{
-								let c = sub(l, r);
-								if(c == 0)
-								{
-									return it.descending ?
-										-it.comparer(mCompare.key(l), mCompare.key(r)):
-										it.comparer(mCompare.key(l), mCompare.key(r));
-								}
-
-								return c;
-							};
-						}
-					}
-
-					mOrderedList.Sort(cmp);
-					mCount = mOrderedList.Count;//keeping vars local
-				}
-
-				if (mIndex < mCount)
-					return .Ok(mOrderedList[mIndex++]);
-
-				return .Err;
-			}
-
-			public Enumerator GetEnumerator() => .(this);
-
-			public struct Enumerator : IEnumerator<TSource>, IDisposable
-			{
-				SelfOuter mSelf;
-
-				public this(SelfOuter self)
-				{
-					mSelf = self;
-				}
-
-				public Result<TSource> GetNext() mut => mSelf.GetNext();
-
-				public void Dispose() mut => mSelf.Dispose();
-			}
-
-			public void Dispose() mut
-			{
-				mIterator.Dispose();
-				DeleteAndNullify!(mCompares);
-				DeleteAndNullify!(mOrderedList);
-			}
-
-			public Self ThenBy<TKey2, TKeyDlg2, TCompare2>(TKeyDlg2 key, TCompare2 compare) mut
-				//where TEnum2 : concrete, IEnumerator<(TKey key, TSource value)>
-				where TKeyDlg2 : delegate TKey2(TSource)
-				where TCompare2 : delegate int(TKey2 lhs, TKey2 rhs)
-			{
-				if(mCompares == null)
-					mCompares = new .();
-				mCompares.Add((key, compare, false));
+				let comparison = OrderByComparison<TKey2>.Comparison;
+				var add = mCompares.GrowUnitialized(1);
+				add.comparer = new (l, r) => comparison(keySelect(l), keySelect(r));
+				add.descending = false;
 				return this;
 			}
-
-			public SubSortEnumerable<decltype(default(sortedEnumerable).GetEnumerator()), TSource, TKey, TKey2, TKeyDlg2, delegate int(TKey2 lhs, TKey2 rhs)>
-				ThenBy<TKey2, TKeyDlg2>(TKeyDlg2 key)
-				where TKeyDlg2 : delegate TKey2(TSource)
-				where int : operator TKey2 <=> TKey2
-			{
-				return .(mSorted.GetEnumerator(), key, OrderByComparison<TKey2>.Comparison, false);
-			}
 		}
-#endif
-#if false
-		struct ThenByEnumerable<TSource, TEnum, TKey, TKeyDlg, TCompare> : IEnumerable<TSource>, IDisposable
-			where TEnum : concrete, IEnumerator<TSource>
-			where TKeyDlg : delegate TKey(TSource)
-			where TCompare : delegate int(TKey lhs, TKey rhs)
-		{
-			typealias sortedEnumerable = SortedEnumerable<TSource, TEnum, TKey, TKeyDlg, TCompare>;
-			internal sortedEnumerable mSorted;
-
-			public this(TEnum enumerator, TKeyDlg key, TCompare compare, bool descending)
-			{
-				mSorted = .(enumerator, key, compare, descending);
-			}
-
-			Result<TSource> GetNext() mut
-			{
-				if (mSorted.GetNext() case .Ok(let val))
-					return .Ok(val.value);
-
-				return .Err;
-			}
-
-			public Enumerator GetEnumerator() => .(this);
-
-			public struct Enumerator : IEnumerator<TSource>, IDisposable
-			{
-				SelfOuter mSelf;
-
-				public this(SelfOuter self)
-				{
-					mSelf = self;
-				}
-
-				public Result<TSource> GetNext() mut => mSelf.GetNext();
-
-				public void Dispose() mut => mSelf.Dispose();
-			}
-
-			public void Dispose() mut
-			{
-				mSorted.Dispose();
-			}
-
-			public SubSortEnumerable<decltype(default(sortedEnumerable).GetEnumerator()), TSource, TKey, TKey2, TKeyDlg2, TCompare2>
-				ThenBy<TKey2, TKeyDlg2, TCompare2>(TKeyDlg2 key, TCompare2 compare)
-				//where TEnum2 : concrete, IEnumerator<(TKey key, TSource value)>
-				where TKeyDlg2 : delegate TKey2(TSource)
-				where TCompare2 : delegate int(TKey2 lhs, TKey2 rhs)
-			{
-				return .(mSorted.GetEnumerator(), key, compare, false);
-			}
-
-			public SubSortEnumerable<decltype(default(sortedEnumerable).GetEnumerator()), TSource, TKey, TKey2, TKeyDlg2, delegate int(TKey2 lhs, TKey2 rhs)>
-				ThenBy<TKey2, TKeyDlg2>(TKeyDlg2 key)
-				where TKeyDlg2 : delegate TKey2(TSource)
-				where int : operator TKey2 <=> TKey2
-			{
-				return .(mSorted.GetEnumerator(), key, OrderByComparison<TKey2>.Comparison, false);
-			}
-		}
-	#endif
 
 		public static OrderByEnumerable<TSource, decltype(default(TCollection).GetEnumerator())>
 			OrderBy<TCollection, TSource, TKey, TKeyDlg>(this TCollection items, TKeyDlg keySelect)
@@ -2868,85 +2696,6 @@ namespace System.Linq
 		{
 			return .(items, new (l, r) => comparison(keySelect(l), keySelect(r)), true);
 		}
-
-#if false
-		struct ThenByEnumerable<TSource, TEnum, TKey, TSubKey, TKeyDlg, TCompare> :  IEnumerable<TSource>, IDisposable
-			where TEnum : concrete, IEnumerator<(TKey key, TSource value)>//, IDisposable
-			where TKeyDlg : delegate TSubKey(TSource)
-			where TCompare : delegate int(TSubKey lhs, TSubKey rhs)
-		{
-			typealias sortedEnumerable = SubSortEnumerable<TEnum, TSource, TKey, TSubKey, TKeyDlg, TCompare>;
-			sortedEnumerable mSorted;
-
-			public this(TEnum enumerator, TKeyDlg key, TCompare compare, bool descending)
-			{
-				mSorted = .(enumerator, key, compare, descending);
-			}
-
-			Result<TSource> GetNext() mut
-			{
-				if (mSorted.GetNext() case .Ok(let val))
-					return .Ok(val);
-
-				return .Err;
-			}
-
-			public Enumerator GetEnumerator() => .(this);
-
-			public struct Enumerator : IEnumerator<TSource>, IDisposable
-			{
-				SelfOuter mSelf;
-
-				public this(SelfOuter self)
-				{
-					mSelf = self;
-				}
-
-				public Result<TSource> GetNext() mut => mSelf.GetNext();
-
-				public void Dispose() mut => mSelf.Dispose();
-			}
-
-			public void Dispose() mut
-			{
-				mSorted.Dispose();
-			}
-
-			/*internal SubSortEnumerable<TSource, decltype(default(Self).GetEnumerator()), TKey2,  TKey3, TKeyDlg2,
-			TCompare2> Then<TEnum2, TKey3, TKeyDlg2, TCompare2>(TKeyDlg2 key, TCompare2 compare, bool descending) where
-			TEnum2: concrete, IEnumerator<(TKey2 key, TSource value)> where TKeyDlg2: delegate TKey3(TSource) where
-			TCompare2 : delegate int(TKey3 lhs, TKey3 rhs)
-			{
-				return .(mSorted.GetEnumerator(), key, compare, descending);
-			}*/
-
-			/*internal SubSortEnumerable<decltype(default(sortedEnumerable).GetEnumerator()), TSource, TSubKey, TKey2, TKeyDlg2, TCompare2>
-				ThenBy< TKey2, TKeyDlg2, TCompare2>(TKeyDlg2 key, TCompare2 compare, bool descending)
-				where TKeyDlg2 : delegate TKey2(TSource)
-				where TCompare2 : delegate int(TKey2 lhs, TKey2 rhs)
-			{
-				return .(mSorted.GetEnumerator(), key, compare, descending);
-			}
-
-			internal SubSortEnumerable<decltype(default(sortedEnumerable).GetEnumerator()), TSource, TSubKey, TKey2, TKeyDlg2, delegate int(TKey2 lhs, TKey2 rhs)>
-				ThenBy< TKey2, TKeyDlg2>(TKeyDlg2 key)
-				where TKeyDlg2 : delegate TKey2(TSource)
-				where int : operator TKey2 <=> TKey2
-			{
-				return .(mSorted.GetEnumerator(), key, OrderByComparison<TKey2>.Comparison, false);
-			}*/
-		}
-		public static ThenByEnumerable<TSource, decltype(default(SortedEnumerable<TSource, TEnum, TKey, delegate TKey(TSource), delegate int(TKey lhs, TKey rhs)>).GetEnumerator()), TKey, TKey2, TKeyDlg, TCompare>
-			ThenBy<TSource, TEnum, TEnum2, TOrdered, TKey, TKey2, TKeyDlg, TCompare>(this TOrdered items, TKeyDlg keySelect, TCompare comparison)
-			where TEnum : concrete, IEnumerator<TSource>
-			where TKeyDlg : delegate TKey2(TSource)
-			where TCompare : delegate int(TKey2 lhs, TKey2 rhs)
-			where TOrdered : OrderByEnumerable<TSource, TEnum, TKey, delegate TKey(TSource), delegate int(TKey lhs, TKey rhs)>
-		{
-			//items.ThenBy(keySelect, comparison, false);
-			return .(items.mSorted.GetEnumerator(), keySelect, comparison, false);
-		}
-#endif
 
 		struct SelectManyEnumerable<TSource, TEnum, TSelect, TResult, TEnum2> : IEnumerable<TResult>, IDisposable
 			where TEnum : concrete, IEnumerator<TSource>
